@@ -1,3 +1,5 @@
+import {fontFamily} from 'tailwindcss/defaultTheme'
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ["class"],
@@ -57,7 +59,7 @@ module.exports = {
                 sm: "calc(var(--radius) - 4px)",
             },
             fontFamily: {
-                sans: ["var(--font-sans)"],
+                sans: ['Inter var', ...fontFamily.sans],
             },
             keyframes: {
                 "accordion-down": {

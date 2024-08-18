@@ -1,7 +1,10 @@
 use futures::{SinkExt, StreamExt};
+use rand::prelude::IteratorRandom;
 use regex::Regex;
+use tauri::{AppHandle, Emitter, Manager};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Result;
+use crate::misc::setup::TwitchAuth;
 
 struct TwitchState {
     access_token: String,
@@ -12,7 +15,8 @@ struct TwitchState {
 }
 
 fn parse_twitch_message(message: &str) -> Option<(String, String, String)> {
-    let re = Regex::new(r"@(?P<tags>[^ ]*) (?P<username>[^!]+)!.* PRIVMSG #[^ ]* :(?P<message>.*)").unwrap();
+    let re = Regex::new(r"@(?P<tags>[^ ]*) (?P<username>[^!]+)!.* PRIVMSG #[^ ]* :(?P<message>.*)")
+        .unwrap();
     if let Some(caps) = re.captures(message) {
         let tags = &caps["tags"];
         let username = &caps["username"];
@@ -38,7 +42,10 @@ fn parse_twitch_tags(tags_str: &str) -> Vec<(&str, &str)> {
 }
 
 fn construct_emote_url(emote_id: &str) -> String {
-    format!("https://static-cdn.jtvnw.net/emoticons/v2/{}/default/dark/1.0", emote_id)
+    format!(
+        "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/dark/1.0",
+        emote_id
+    )
 }
 
 struct TwitchResponse {
@@ -50,10 +57,27 @@ struct TwitchResponse {
     tags: Vec<(String, String)>,
 }
 
-pub(crate) async fn connect() -> Result<()> {
-    let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443").await.unwrap_or_else(|e| panic!("Error during handshake: {}", e));
+#[tauri::command]
+pub(crate) async fn connect(app: AppHandle) -> Result<()> {
+    let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
+        .await
+        .unwrap_or_else(|e| panic!("Error during handshake: {}", e));
 
-    ws_stream.send("NICK justinfan42069".into()).await?;
+    let usernames = vec![
+        "EliteMild",
+        "AfflictLung",
+        "BeetrootGenuine",
+        "SundressImpressive",
+        "ThymeNext",
+        "BlairStick",
+        "MainsheetGrave",
+        "HeadlineEagle",
+        "TruthWaist"
+    ];
+
+    let username = usernames.choose(&mut rand::thread_rng()).unwrap();
+
+    ws_stream.send(format!("NICK {}", username)).await?;
 
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
@@ -68,14 +92,28 @@ pub(crate) async fn connect() -> Result<()> {
             if let Some((tags, username, content)) = parse_twitch_message(&*msg) {
                 let parsed_tags = parse_twitch_tags(&tags);
                 // Get badges from tags, can be none
-                let badges = parsed_tags.iter().find(|(name, _)| *name == "badges").map(|(_, value)| value);
+                let badges = parsed_tags
+                    .iter()
+                    .find(|(name, _)| *name == "badges")
+                    .map(|(_, value)| value);
                 // Get color from tags, can be none
-                let color = parsed_tags.iter().find(|(name, _)| *name == "color").map(|(_, value)| value);
+                let color = parsed_tags
+                    .iter()
+                    .find(|(name, _)| *name == "color")
+                    .map(|(_, value)| value);
                 // Get display-name from tags, can be none
-                let display_name = parsed_tags.iter().find(|(name, _)| *name == "display-name").map(|(_, value)| value);
+                let display_name = parsed_tags
+                    .iter()
+                    .find(|(name, _)| *name == "display-name")
+                    .map(|(_, value)| value);
                 // Get emotes from tags, can be none
-                let emotes = parsed_tags.iter().find(|(name, _)| *name == "emotes").map(|(_, value)| value).unwrap();
+                let emotes = parsed_tags
+                    .iter()
+                    .find(|(name, _)| *name == "emotes")
+                    .map(|(_, value)| value)
+                    .unwrap();
 
+                let mut msg = content.clone();
                 if !emotes.is_empty() {
                     // Calculate the emote position by using the :Number-Number on the emote tag
                     let emotes_vec: Vec<&str> = emotes.split('/').collect();
@@ -84,39 +122,31 @@ pub(crate) async fn connect() -> Result<()> {
                     for emote in &emotes_vec {
                         let emote_parts: Vec<&str> = emote.split(':').collect();
                         let emote_positions_str = emote_parts[1];
-                        let emote_positions_vec: Vec<&str> = emote_positions_str.split(',').collect();
-                        let start_end: Vec<usize> = emote_positions_vec[0].split('-').map(|x| x.parse().unwrap()).collect();
+                        let emote_positions_vec: Vec<&str> =
+                            emote_positions_str.split(',').collect();
+                        let start_end: Vec<usize> = emote_positions_vec[0]
+                            .split('-')
+                            .map(|x| x.parse().unwrap())
+                            .collect();
                         let emote_id = emote_parts[0];
                         emote_positions.push((start_end[0], start_end[1], emote_id.to_string()));
                     }
 
                     // Get the equivalent emote name on the content
-                    let mut msg = content.clone();
                     for (start, end, emote_id) in emote_positions {
                         // Name, not id
                         let emote_name = &content[start..end + 1];
                         let emote_url = construct_emote_url(&emote_id);
-                        let emote_image = format!("<img src=\"{}\" alt=\"{}\" />", emote_url, emote_name);
+                        let emote_image =
+                            format!("<img id=\"{}\" src=\"{}\" alt=\"{}\" />", emote_name, emote_url, emote_name);
                         msg = msg.replace(emote_name, &emote_image);
                     }
-
-                    println!("{}: {}", display_name.unwrap_or(&&**&username), msg);
-                } else {
-                    println!("No match found.");
                 }
+
+                let app_clone = app.clone();
+
             }
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_connect() {
-        let result = connect().await;
-        assert!(result.is_ok(), "Failed to connect to Twitch");
-    }
 }

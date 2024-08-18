@@ -23,3 +23,8 @@ futures = "0.3.30"
 tokio-tungstenite = { version = "0.23.1", features = ["native-tls"] }
 tokio = { version = "1.39.2", features = ["full"] }
 regex = "1.10.6"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+tauri-plugin-shell = "2.0.0-rc.0"
+tauri-plugin-dialog = "2.0.0-rc.0"
+rand = "0.7.3"
+chrono = "0.4.38"

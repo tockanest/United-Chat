@@ -1,2 +1,4 @@
 mod websocket_client;
-mod auth;
+
+#[macro_use]
+pub(crate) mod auth;
