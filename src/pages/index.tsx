@@ -1,6 +1,6 @@
-import {useState, useEffect, SetStateAction} from 'react';
+import {SetStateAction, useEffect, useState} from 'react';
 import {Button} from "@/components/ui/button"
-import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card"
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import CodeMirror from '@uiw/react-codemirror';
 import {html} from '@codemirror/lang-html';
@@ -10,12 +10,14 @@ import {tags as t} from '@lezer/highlight';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {
     DropdownMenu,
-    DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import TauriApi from "@/lib/Tauri";
 
 // Custom Tailwind highlighting
 const tailwindHighlighting = HighlightStyle.define([
@@ -57,6 +59,8 @@ export default function Home() {
         import('@uiw/react-codemirror').then(() => {
             // CodeMirror is now loaded
         });
+
+        TauriApi.ConnectTwitchWebsocket();
     }, []);
 
     return (

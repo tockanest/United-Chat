@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct ImplicitGrantFlow {
@@ -24,8 +23,6 @@ pub(crate) struct UserInformation {
     pub(crate) expires_in: String,
     pub(crate) internal_info: InternalUserInformation,
 }
-
-//
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct InternalUserInformation {
@@ -52,7 +49,7 @@ struct ReqValidateResponse {
 }
 
 #[tauri::command]
-pub(crate) async fn start_twitch_link(client_id: &str, scopes: &str, app: AppHandle) -> Result<String, ()> {
+pub(crate) async fn start_twitch_link(client_id: &str, scopes: &str) -> Result<String, ()> {
     let client_id = client_id.to_string();
     let scopes = scopes.to_string();
 
@@ -60,11 +57,13 @@ pub(crate) async fn start_twitch_link(client_id: &str, scopes: &str, app: AppHan
     let rand_state = Alphanumeric.sample_string(&mut rand::thread_rng(), 32).to_lowercase();
 
     // Check if we are prod or not
-    let redirect_uri = if cfg!(debug_assertions) {
-        "http://localhost:3001/united-chat/auth"
-    } else {
-        "https://tockanest.com/unitedchat"
-    };
+    // let redirect_uri = if cfg!(debug_assertions) {
+    //     "http://localhost:3001/united-chat/auth"
+    // } else {
+    //     "https://tockanest.com/united-chat/auth"
+    // };
+
+    let redirect_uri = "https://tockanest.com/united-chat/auth";
 
     let url = format!(
         "https://id.twitch.tv/oauth2/authorize?client_id={}&redirect_uri={}&response_type={}&scope={}&state={}",
@@ -119,20 +118,20 @@ fn validate_user(auth: String) -> Result<UserInformation, String> {
                             display_name: user_info.display_name.clone(),
                             id: user_info.id.clone(),
                             login: user_info.login.clone(),
-                            profile_image_url: "".to_string(),
+                            profile_image_url: user_info.profile_image_url.clone(),
                         },
                     };
 
                     // Return the user information
                     Ok(user)
                 }
-                e => {
+                _e => {
                     let resp = response.text().expect("Failed to get response text");
                     Err(format!("Failed to validate user: {}", resp))
                 }
             }
         }
-        e => {
+        _e => {
             let resp = response.text().expect("Failed to get response text");
             Err(format!("Failed to get user info: {}", resp))
         }
@@ -184,7 +183,7 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
                     // If all query parameters are present, emit the setup_complete event with the query parameters
 
                     let user = validate_user(access_token.clone()).unwrap();
-                    app.manage(Mutex::new(user.clone()));
+                    app.manage(user.clone());
 
                     // Write the user information to a json file at dirs::config_dir() / "united-chat" / "twitch-auth.json"
                     let path = dirs::config_dir().unwrap().join("United Chat");
@@ -207,7 +206,7 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
                         error_description: None,
                         skipped: Option::from(false),
                     };
-                    app.manage(Mutex::new(state.clone()));
+                    app.manage(state.clone());
 
                     let entry = Entry::new("united-chat", "twitch-auth").unwrap_or_else(|e| panic!("Error: {}", e));
                     entry

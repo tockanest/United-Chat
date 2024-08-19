@@ -1,5 +1,6 @@
-use crate::chat::twitch::auth::ImplicitGrantFlow;
+use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use keyring::Entry;
+use serde_json::json;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::task;
@@ -10,26 +11,44 @@ pub(crate) struct SetupState {
 }
 
 async fn backend_setup(app: AppHandle) {
-    let app_clone = app.clone();
-
-    // Try to get the Twitch authentication from the keyring first
     match Entry::new("united-chat", "twitch-auth") {
         Ok(entry) => {
             let auth = entry.get_password().unwrap();
+            let parsed: ImplicitGrantFlow = serde_json::from_str(&auth).unwrap();
 
-            let parsed: ImplicitGrantFlow = serde_json::from_str(&auth.clone()).unwrap();
+            let app_clone = app.clone();
+            // Manage state directly after parsing
+            app_clone.manage(
+                ImplicitGrantFlow {
+                    access_token: parsed.access_token,
+                    scope: parsed.scope,
+                    state: parsed.state,
+                    token_type: parsed.token_type,
+                    error: parsed.error,
+                    error_description: parsed.error_description,
+                    skipped: parsed.skipped,
+                }
+            );
 
-            let val = ImplicitGrantFlow {
-                access_token: parsed.access_token,
-                scope: parsed.scope,
-                state: parsed.state,
-                token_type: parsed.token_type,
-                error: None,
-                error_description: None,
-                skipped: None,
-            };
+            let path = dirs::config_dir().unwrap().join("United Chat");
+            if !path.exists() {
+                std::fs::create_dir_all(&path).expect("Failed to create directory");
+            }
 
-            app.manage(val);
+            let user_file = path.join("twitch-auth.json");
+            // Read the file
+            let file = std::fs::File::open(user_file.clone()).expect("Failed to open file");
+            let user: UserInformation = serde_json::from_reader(file).unwrap_or_else(|e| {
+                // Emit an event and panic if the file can't be read
+                app.emit("splashscreen::twitch_auth", json!({
+                    "success": false,
+                    "error": e.to_string()
+                })).expect("Failed to emit setup_complete event");
+                panic!("Error: {}", e);
+            });
+
+            // Manage the user information
+            app.manage(user.clone());
 
             task::spawn_blocking(move || {
                 let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -39,13 +58,10 @@ async fn backend_setup(app: AppHandle) {
                     "backend".to_string(),
                     None,
                 ))
-            })
+            });
         }
         Err(_) => {
-            // If the keyring entry doesn't exist, send an event to the frontend to start the Twitch authentication process
-            app_clone
-                .emit_to("splashscreen", "splashscreen::twitch-reauth", true)
-                .unwrap();
+            app.emit_to("splashscreen", "splashscreen::twitch-reauth", true).unwrap();
             panic!("Twitch auth not found");
         }
     };

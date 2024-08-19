@@ -4,6 +4,8 @@ export default class TauriApi {
         return invoke(command, args);
     }
 
+    /** Twitch Linking Process */
+
     public static async StartLinking() {
         return await this.command<string>("start_twitch_link", {
             clientId: "h3yvglc6y3kmtrzyq7it20z7vi5sa2",
@@ -37,6 +39,10 @@ export default class TauriApi {
         const {open} = await import("@tauri-apps/plugin-shell");
         return await open(url);
 
+    }
+
+    public static async ConnectTwitchWebsocket() {
+        return await this.command<boolean>("connect_twitch_websocket", {});
     }
 
     public static async ListenEvent(event: string, callback: (event: any) => void) {

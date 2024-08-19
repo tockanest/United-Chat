@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
-import {Loader2Icon, TwitchIcon, MessageSquareIcon} from 'lucide-react'
+import {Loader2Icon, MessageSquareIcon, TwitchIcon} from 'lucide-react'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -12,11 +12,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
 import TauriApi from "@/lib/Tauri";
 
 export default function Component() {
     const [isLinking, setIsLinking] = useState(false)
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [showStreamerUrlDialog, setShowStreamerUrlDialog] = useState(false)
+    const [streamerUrl, setStreamerUrl] = useState('')
+    const [urlError, setUrlError] = useState('')
 
     const [alreadyLinked, setAlreadyLinked] = useState(false)
 
@@ -57,16 +62,32 @@ export default function Component() {
 
     const handleConfirmContinueWithoutAccount = () => {
         setShowConfirmDialog(false)
-        // Here you would handle continuing without an account
-        TauriApi.SkipLinking().then((value) => {
-            if (value) {
-                setAlreadyLinked(true)
-                localStorage.setItem('twitch_linked', 'true')
-                TauriApi.FinishFrontendSetup().then(() => {
-                    console.log('Frontend setup complete')
-                })
-            }
-        })
+        setShowStreamerUrlDialog(true)
+    }
+
+    const validateUrl = (url: string) => {
+        const twitchUrlRegex = /^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]+)$/
+        return twitchUrlRegex.test(url)
+    }
+
+    const handleStreamerUrlSubmit = () => {
+        if (validateUrl(streamerUrl)) {
+            setUrlError('')
+            setShowStreamerUrlDialog(false)
+            TauriApi.SkipLinking().then((value) => {
+                if (value) {
+                    setAlreadyLinked(true)
+                    localStorage.setItem('twitch_linked', 'true')
+                    TauriApi.FinishFrontendSetup().then(() => {
+                        console.log('Frontend setup complete')
+                        // Here you would typically send the streamerUrl to your backend
+                        console.log('Streamer URL:', streamerUrl)
+                    })
+                }
+            })
+        } else {
+            setUrlError('Please enter a valid Twitch channel URL')
+        }
     }
 
     return (
@@ -144,6 +165,36 @@ export default function Component() {
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
                                         onClick={handleConfirmContinueWithoutAccount}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                        <AlertDialog open={showStreamerUrlDialog} onOpenChange={setShowStreamerUrlDialog}>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Enter Streamer URL</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Please provide the Twitch channel URL you want to listen to.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="streamer-url" className="text-right">
+                                            URL
+                                        </Label>
+                                        <Input
+                                            id="streamer-url"
+                                            value={streamerUrl}
+                                            onChange={(e) => setStreamerUrl(e.target.value)}
+                                            className="col-span-3"
+                                            placeholder="https://www.twitch.tv/channelname"
+                                        />
+                                    </div>
+                                    {urlError && <p className="text-sm text-red-500">{urlError}</p>}
+                                </div>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleStreamerUrlSubmit}>Submit</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>

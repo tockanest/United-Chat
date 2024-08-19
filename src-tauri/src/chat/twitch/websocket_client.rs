@@ -1,17 +1,9 @@
+use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use futures::{SinkExt, StreamExt};
-use rand::prelude::IteratorRandom;
 use regex::Regex;
-use tauri::AppHandle;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Manager, State};
 use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::Result;
-
-struct TwitchState {
-    access_token: String,
-    expires_in: u64,
-    refresh_token: String,
-    scope: Vec<String>,
-    token_type: String,
-}
 
 fn parse_twitch_message(message: &str) -> Option<(String, String, String)> {
     let re = Regex::new(r"@(?P<tags>[^ ]*) (?P<username>[^!]+)!.* PRIVMSG #[^ ]* :(?P<message>.*)")
@@ -47,6 +39,46 @@ fn construct_emote_url(emote_id: &str) -> String {
     )
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct TwitchBadgeVersion {
+    id: String,
+    image_url_1x: String,
+    image_url_2x: String,
+    image_url_4x: String,
+    title: String,
+    description: String,
+    click_action: String,
+    click_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TwitchBadgeSet {
+    set_id: String,
+    versions: Vec<TwitchBadgeVersion>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TwitchBadgesResponse {
+    data: Vec<TwitchBadgeSet>,
+}
+
+async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) {
+    let client = reqwest::Client::new();
+    println!("{}", user_state.clone().user_id);
+    let req = client
+        .get(format!("https://api.twitch.tv/helix/chat/badges?broadcaster_id={}", "228386227"))
+        .header("Client-ID", "h3yvglc6y3kmtrzyq7it20z7vi5sa2")
+        .header("Authorization", format!("Bearer {}", auth_state.access_token))
+        .send()
+        .await
+        .unwrap();
+
+    println!("{:?}", req.text().await.unwrap());
+    // let badges: TwitchBadgesResponse = req.json().await.unwrap();
+    //
+    // badges
+}
+
 struct TwitchResponse {
     timestamp: String,
     display_name: String,
@@ -57,37 +89,24 @@ struct TwitchResponse {
 }
 
 #[tauri::command]
-pub(crate) async fn connect(app: AppHandle) -> Result<()> {
+pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
         .unwrap_or_else(|e| panic!("Error during handshake: {}", e));
 
-    let usernames = vec![
-        "EliteMild",
-        "AfflictLung",
-        "BeetrootGenuine",
-        "SundressImpressive",
-        "ThymeNext",
-        "BlairStick",
-        "MainsheetGrave",
-        "HeadlineEagle",
-        "TruthWaist",
-    ];
-
-    let username = usernames.iter().choose(&mut rand::thread_rng()).unwrap();
 
     ws_stream
-        .send(format!("NICK {:?}", username).into())
-        .await?;
+        .send("NICK justinfan1234".into())
+        .await.unwrap();
 
     while let Some(msg) = ws_stream.next().await {
-        let msg = msg?;
+        let msg = msg.unwrap();
 
         if msg.to_string().contains("PING") {
-            ws_stream.send("PONG :tmi.twitch.tv".into()).await?;
+            ws_stream.send("PONG :tmi.twitch.tv".into()).await.unwrap();
         } else if msg.to_string().contains("Welcome, GLHF!") {
-            ws_stream.send("CAP REQ :twitch.tv/tags".into()).await?;
-            ws_stream.send("JOIN #nixyyi".into()).await?;
+            ws_stream.send("CAP REQ :twitch.tv/tags".into()).await.unwrap();
+            ws_stream.send("JOIN #nixyyi".into()).await.unwrap();
         } else if msg.to_string().contains("PRIVMSG") {
             let msg = msg.to_string();
             if let Some((tags, username, content)) = parse_twitch_message(&*msg) {
@@ -146,9 +165,17 @@ pub(crate) async fn connect(app: AppHandle) -> Result<()> {
                     }
                 }
 
-                let app_clone = app.clone();
+                let state = app.state::<ImplicitGrantFlow>();
+
+                // Check if the setup was skipped by checking the "skipped" flag on the state: skipped: Option<bool>
+                if let Some(skipped) = state.skipped {
+                    if !skipped {
+                        let user_information = app.state::<UserInformation>();
+                        let badges = get_chat_badges(state.clone(), user_information.clone()).await;
+                        // println!("{:?}", badges);
+                    }
+                }
             }
         }
     }
-    Ok(())
 }

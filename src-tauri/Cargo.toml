@@ -1,9 +1,14 @@
 [package]
 name = "united-chat"
 version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "United Chat"
+authors = [
+    "Nixyan - nixyan@tockanest.com"
+]
 edition = "2021"
+license = "AGPL-3"
+readme = "../README.md"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
