@@ -13,8 +13,7 @@ const nextConfig = {
             //'cdn.tailwindcss.com'
             protocol: 'https', hostname: 'cdn.tailwindcss.com', port: "443",
         }],
-    }, // Configure assetPrefix or else the server won't properly resolve your assets.
-    assetPrefix: isProd ? null : `http://${internalHost}:3000`,
+    },
 
 };
 

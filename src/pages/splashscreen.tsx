@@ -21,7 +21,7 @@ export default function Component() {
     const [alreadyLinked, setAlreadyLinked] = useState(false)
 
     useEffect(() => {
-        const isTwitchLinked = localStorage.getItem("twitch_linked");
+        const isTwitchLinked = localStorage.getItem('twitch_linked') === 'true'
         if (isTwitchLinked) {
             setAlreadyLinked(true)
             TauriApi.FinishFrontendSetup().then(() => {
@@ -32,28 +32,22 @@ export default function Component() {
 
     const handleLinkAccount = () => {
         setIsLinking(true)
-        // Simulating an async operation
+
         TauriApi.StartLinking().then((result) => {
             if (result) {
-                setIsLinking(false)
-                localStorage.setItem("twitch_linked", "true");
-                
+                TauriApi.OpenUrl(result);
+            }
+        })
+
+        TauriApi.ListenEvent("splashscreen::twitch_auth", (event) => {
+            const typedEvent = event.payload as boolean
+            if (typedEvent) {
+                setAlreadyLinked(true)
+                localStorage.setItem('twitch_linked', 'true')
                 TauriApi.FinishFrontendSetup().then(() => {
                     console.log('Frontend setup complete')
                 })
             }
-        })
-
-        TauriApi.ListenEvent("splashscreen::device_linking", (event) => {
-            const typedEvent = event.payload as {
-                device_code: string,
-                expires_in: number,
-                interval: number,
-                user_code: string,
-                verification_uri: string,
-            }
-
-            TauriApi.OpenUrl(typedEvent.verification_uri);
         })
     }
 
@@ -64,7 +58,15 @@ export default function Component() {
     const handleConfirmContinueWithoutAccount = () => {
         setShowConfirmDialog(false)
         // Here you would handle continuing without an account
-        console.log('Continuing without account...')
+        TauriApi.SkipLinking().then((value) => {
+            if (value) {
+                setAlreadyLinked(true)
+                localStorage.setItem('twitch_linked', 'true')
+                TauriApi.FinishFrontendSetup().then(() => {
+                    console.log('Frontend setup complete')
+                })
+            }
+        })
     }
 
     return (
@@ -122,6 +124,7 @@ export default function Component() {
                                     variant="outline"
                                     onClick={handleContinueWithoutAccount}
                                     className="w-full"
+                                    disabled={isLinking}
                                 >
                                     Continue without account
                                 </Button>

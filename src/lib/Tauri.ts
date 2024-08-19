@@ -5,10 +5,14 @@ export default class TauriApi {
     }
 
     public static async StartLinking() {
-        return await this.command<boolean>("polling_for_access_token", {
+        return await this.command<string>("start_twitch_link", {
             clientId: "h3yvglc6y3kmtrzyq7it20z7vi5sa2",
-            scopes: "user:read:chat"
+            scopes: "user:read:chat+user:read:email"
         })
+    }
+
+    public static async SkipLinking() {
+        return await this.command<boolean>("skip_twitch_auth", {});
     }
 
     public static async FinishFrontendSetup() {

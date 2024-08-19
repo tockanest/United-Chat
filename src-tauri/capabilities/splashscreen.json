@@ -13,6 +13,8 @@
 		"core:resources:default",
 		"core:menu:default",
 		"core:tray:default",
-		"shell:default"
+		"shell:default",
+		"deep-link:default",
+		"deep-link:allow-is-registered"
 	]
 }

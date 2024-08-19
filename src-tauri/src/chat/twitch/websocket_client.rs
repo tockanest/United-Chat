@@ -1,10 +1,9 @@
 use futures::{SinkExt, StreamExt};
 use rand::prelude::IteratorRandom;
 use regex::Regex;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::AppHandle;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Result;
-use crate::misc::setup::TwitchAuth;
 
 struct TwitchState {
     access_token: String,
@@ -72,12 +71,14 @@ pub(crate) async fn connect(app: AppHandle) -> Result<()> {
         "BlairStick",
         "MainsheetGrave",
         "HeadlineEagle",
-        "TruthWaist"
+        "TruthWaist",
     ];
 
-    let username = usernames.choose(&mut rand::thread_rng()).unwrap();
+    let username = usernames.iter().choose(&mut rand::thread_rng()).unwrap();
 
-    ws_stream.send(format!("NICK {}", username)).await?;
+    ws_stream
+        .send(format!("NICK {:?}", username).into())
+        .await?;
 
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
@@ -137,14 +138,15 @@ pub(crate) async fn connect(app: AppHandle) -> Result<()> {
                         // Name, not id
                         let emote_name = &content[start..end + 1];
                         let emote_url = construct_emote_url(&emote_id);
-                        let emote_image =
-                            format!("<img id=\"{}\" src=\"{}\" alt=\"{}\" />", emote_name, emote_url, emote_name);
+                        let emote_image = format!(
+                            "<img id=\"{}\" src=\"{}\" alt=\"{}\" />",
+                            emote_name, emote_url, emote_name
+                        );
                         msg = msg.replace(emote_name, &emote_image);
                     }
                 }
 
                 let app_clone = app.clone();
-
             }
         }
     }

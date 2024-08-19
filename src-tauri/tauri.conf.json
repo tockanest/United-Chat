@@ -1,46 +1,63 @@
 {
-    "productName": "united-chat",
-    "version": "0.1.0",
-    "identifier": "nixyan.united-chat",
-    "build": {
-        "beforeDevCommand": "npm run dev",
-        "beforeBuildCommand": "npm run build",
-        "devUrl": "http://localhost:3000",
-        "frontendDist": "../out"
-    },
-    "app": {
-        "withGlobalTauri": true,
-        "windows": [
-            {
-                "label": "main",
-                "title": "United Chat",
-                "width": 800,
-                "height": 600,
-                "maximized": true,
-                "visible": false
-            },
-            {
-                "label": "splashscreen",
-                "title": "PontuAll - Inicializando",
-                "width": 600,
-                "height": 600,
-                "resizable": true,
-                "visible": true,
-                "url": "/splashscreen",
-                "center": true,
-                "closable": false
-            }
-        ],
-        "security": {
-            "csp": null
-        }
-    },
-    "bundle": {
-        "active": true,
-        "targets": "all",
-        "icon": [
-            "icons/256x256.png",
-            "icons/256x256.ico"
-        ]
-    }
+	"productName": "united-chat",
+	"version": "0.1.0",
+	"identifier": "nixyan.united-chat",
+	"build": {
+		"beforeDevCommand": "npm run dev",
+		"beforeBuildCommand": "npm run build",
+		"devUrl": "http://localhost:3000",
+		"frontendDist": "../out"
+	},
+	"app": {
+		"withGlobalTauri": true,
+		"windows": [
+			{
+				"label": "main",
+				"title": "United Chat",
+				"width": 800,
+				"height": 600,
+				"maximized": true,
+				"visible": false
+			},
+			{
+				"label": "splashscreen",
+				"title": "United Chat - Inicializando",
+				"width": 600,
+				"height": 600,
+				"resizable": true,
+				"visible": true,
+				"url": "/splashscreen",
+				"center": true,
+				"closable": false
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": "all",
+		"icon": [
+			"icons/256x256.png",
+			"icons/256x256.ico"
+		]
+	},
+	"plugins": {
+		"deep-link": {
+			"mobile": [
+				{
+					"host": "uc.tockanest.com",
+					"pathPrefix": [
+						"/"
+					]
+				}
+			],
+			"desktop": {
+				"schemes": [
+					"unitedchat"
+				]
+			}
+		}
+	}
 }

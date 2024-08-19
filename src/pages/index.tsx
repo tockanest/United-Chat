@@ -8,14 +8,19 @@ import {css} from '@codemirror/lang-css';
 import {dracula} from '@uiw/codemirror-theme-dracula';
 import {tags as t} from '@lezer/highlight';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
+import {
+    DropdownMenu,
+    DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 
 // Custom Tailwind highlighting
 const tailwindHighlighting = HighlightStyle.define([
     {tag: t.className, color: "#a5f3fc"},  // Tailwind classes
 ]);
-
-// Regex pattern for Tailwind classes
-const tailwindClassPattern = /(?:^|\s)((?:hover:)?(?:bg|text|border|p|m|flex|grid|w|h|rounded|shadow)(?:-[a-z]+)*(?:\/\d+)?)/g;
 
 const tailwindExtension = html({
     matchClosingTags: true,
@@ -23,7 +28,7 @@ const tailwindExtension = html({
     autoCloseTags: true,
 });
 
-export default function Component() {
+export default function Home() {
     const [htmlCode, setHtmlCode] = useState(
         `<div class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <h1 class="text-4xl font-bold text-blue-600 mb-4">
@@ -56,7 +61,54 @@ export default function Component() {
 
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">United Chat</h1>
+            <header className="m-8">
+                <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <h1 className="text-2xl font-bold">United Chat</h1>
+                        <nav>
+                            <ul className="flex space-x-4">
+                                <li><a href="#" className="text-blue-600 hover:text-blue-800">Home</a></li>
+                                <li><a href="#" className="text-blue-600 hover:text-blue-800">Docs</a></li>
+                                <li><a href="#" className="text-blue-600 hover:text-blue-800">Examples</a></li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@user"/>
+                                    <AvatarFallback>U</AvatarFallback>
+                                </Avatar>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">user@example.com</p>
+                                    <p className="text-xs leading-none text-muted-foreground">
+                                        Free plan
+                                    </p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator/>
+                            <DropdownMenuItem>
+                                Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                Upgrade plan
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator/>
+                            <DropdownMenuItem>
+                                Log out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </header>
             <div className="grid grid-cols-2 gap-4">
                 <Card>
                     <CardHeader>
