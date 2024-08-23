@@ -6,8 +6,8 @@ export default function ThemeProvider() {
     const theme = localStorage.getItem("theme")
 
     if (!theme) {
-        document.documentElement.setAttribute("data-theme", "deepsea")
-        localStorage.setItem("theme", "deepsea")
+        document.documentElement.setAttribute("data-theme", "dark")
+        localStorage.setItem("theme", "dark")
     }
 
     document.documentElement.setAttribute("data-theme", theme as string)

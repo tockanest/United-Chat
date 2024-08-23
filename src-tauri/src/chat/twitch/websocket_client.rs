@@ -64,9 +64,9 @@ struct TwitchBadgesResponse {
 
 async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) {
     let client = reqwest::Client::new();
-    println!("{}", user_state.clone().user_id);
+
     let req = client
-        .get(format!("https://api.twitch.tv/helix/chat/badges?broadcaster_id={}", "228386227"))
+        .get(format!("https://api.twitch.tv/helix/chat/badges?broadcaster_id={}", user_state.user_id))
         .header("Client-ID", "h3yvglc6y3kmtrzyq7it20z7vi5sa2")
         .header("Authorization", format!("Bearer {}", auth_state.access_token))
         .send()
@@ -112,7 +112,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
             if let Some((tags, username, content)) = parse_twitch_message(&*msg) {
                 let parsed_tags = parse_twitch_tags(&tags);
                 // Get badges from tags, can be none
-                let badges = parsed_tags
+                let ws_badges = parsed_tags
                     .iter()
                     .find(|(name, _)| *name == "badges")
                     .map(|(_, value)| value);
@@ -153,11 +153,12 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                     }
 
                     // Get the equivalent emote name on the content
+                    let mut emote_image = String::new();
                     for (start, end, emote_id) in emote_positions {
                         // Name, not id
                         let emote_name = &content[start..end + 1];
                         let emote_url = construct_emote_url(&emote_id);
-                        let emote_image = format!(
+                        emote_image = format!(
                             "<img id=\"{}\" src=\"{}\" alt=\"{}\" />",
                             emote_name, emote_url, emote_name
                         );

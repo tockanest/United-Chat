@@ -1,9 +1,8 @@
 mod chat;
 mod misc;
 
-use crate::chat::twitch::auth::ImplicitGrantFlow;
-use chat::twitch::auth::start_twitch_link;
-use chat::twitch::auth::twitch_auth;
+use chat::twitch::auth::{start_twitch_link, twitch_auth};
+use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::connect_twitch_websocket;
 use misc::setup::{setup_complete, SetupState};
 use std::sync::Mutex;
@@ -40,7 +39,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             setup_complete,
             start_twitch_link,
-            connect_twitch_websocket
+            connect_twitch_websocket,
+            get_user
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

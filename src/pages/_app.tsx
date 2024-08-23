@@ -1,7 +1,7 @@
 import type {AppProps} from 'next/app'
 import Layout from "@/components/component/layout"
 
-import '@/styles/globals.css'
+import '../../public/styles/globals.css'
 import ThemeProvider from "@/components/component/ThemeProvider";
 import {Inter} from "next/font/google";
 

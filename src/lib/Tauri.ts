@@ -45,8 +45,21 @@ export default class TauriApi {
         return await this.command<boolean>("connect_twitch_websocket", {});
     }
 
+
+    public static async GetUserInformation() {
+
+        try {
+            return await this.command<UserInformation>("get_user", {});
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    }
+
     public static async ListenEvent(event: string, callback: (event: any) => void) {
         const {listen} = await import('@tauri-apps/api/event');
         return await listen(event, callback);
     }
 }
+
+
