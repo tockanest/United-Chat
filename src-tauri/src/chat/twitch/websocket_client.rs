@@ -62,7 +62,7 @@ struct TwitchBadgesResponse {
     data: Vec<TwitchBadgeSet>,
 }
 
-async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) {
+async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) -> TwitchBadgesResponse {
     let client = reqwest::Client::new();
 
     let req = client
@@ -73,10 +73,14 @@ async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: S
         .await
         .unwrap();
 
-    println!("{:?}", req.text().await.unwrap());
-    // let badges: TwitchBadgesResponse = req.json().await.unwrap();
-    //
-    // badges
+    let badges: TwitchBadgesResponse = req.json().await.unwrap();
+
+    badges
+}
+
+struct RawTwitchResponse {
+    raw_message: String,
+    raw_emotes: String,
 }
 
 struct TwitchResponse {
@@ -85,6 +89,8 @@ struct TwitchResponse {
     user_color: String,
     user_badges: Vec<String>,
     message: String,
+    emotes: Vec<String, String>,
+    raw_data: RawTwitchResponse,
     tags: Vec<(String, String)>,
 }
 
@@ -134,6 +140,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                     .unwrap();
 
                 let mut msg = content.clone();
+                let mut parsed_emotes: Vec<(String, String)> = Vec::new();
                 if !emotes.is_empty() {
                     // Calculate the emote position by using the :Number-Number on the emote tag
                     let emotes_vec: Vec<&str> = emotes.split('/').collect();
@@ -158,6 +165,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                         // Name, not id
                         let emote_name = &content[start..end + 1];
                         let emote_url = construct_emote_url(&emote_id);
+                        parsed_emotes.push((emote_name.to_string(), emote_url.clone()));
                         emote_image = format!(
                             "<img id=\"{}\" src=\"{}\" alt=\"{}\" />",
                             emote_name, emote_url, emote_name
@@ -173,7 +181,53 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                     if !skipped {
                         let user_information = app.state::<UserInformation>();
                         let badges = get_chat_badges(state.clone(), user_information.clone()).await;
-                        // println!("{:?}", badges);
+
+                        let mut user_badges: Vec<String> = Vec::new();
+                        for badge_set in badges.data {
+                            // From ws_badges we get: Some("broadcaster/1,subscriber/18,glitchcon2020/1") etc.
+                            // We need to split the badges by comma and then by slash to get the badge name and version
+                            let ws_badges_vec: Vec<&str> = ws_badges.unwrap().split(',').collect();
+
+                            if ws_badges_vec.is_empty() {
+                                continue;
+                            }
+
+                            for ws_badge in ws_badges_vec {
+                                let ws_badge_parts: Vec<&str> = ws_badge.split('/').collect();
+                                let ws_badge_name = ws_badge_parts[0];
+                                let ws_badge_id = ws_badge_parts[1];
+
+                                let get_matching_badge = badge_set.set_id == ws_badge_name;
+
+                                if get_matching_badge {
+                                    let badge_version = badge_set
+                                        .versions
+                                        .iter()
+                                        .find(|version| version.id == ws_badge_id);
+
+                                    if let Some(badge_version) = badge_version {
+                                        user_badges.push(badge_version.image_url_4x.clone());
+                                    }
+                                }
+                            }
+                        }
+
+                        let response = TwitchResponse {
+                            timestamp: chrono::Utc::now().to_rfc3339(),
+                            display_name: display_name.unwrap_or(&username.into()).to_string(),
+                            user_color: color.unwrap_or("".into()).to_string(),
+                            user_badges,
+                            message: msg,
+                            emotes: parsed_emotes,
+                            raw_data: RawTwitchResponse {
+                            raw_message: content,
+                            raw_emotes: emotes.to_string(),
+                        },
+                        tags: parsed_tags.into(),
+                    };
+
+                    app.emit_to("main", "chat-data::twitch", response).unwrap();
+
                     }
                 }
             }

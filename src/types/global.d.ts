@@ -14,18 +14,48 @@ declare global {
 		}
 	}
 
-	type Message = {
-		message: {
-			platform: "twitch" | "youtube",
-			user: string,
-			formated_message: string,
+	type TwitchResponse = {
+		timestamp: number
+		display_name: string,
+		user_color: string | null,
+		user_badges: string[] | [] | null,
+		message: string,
+		emotes: string[] | [] | null,
+		raw_data: {
 			raw_message: string,
-			color: string | null,
-			timestamp: number
-			badges: string[] | [] | null,
-			emotes: string[] | [] | null,
-		}
+			raw_emotes: string,
+		},
+		tags: [string, string][],
 	}
+
+	// This will change 100%, do not expect this to work on next update
+	type YoutubeResponse = {
+		timestamp: number;
+		display_name: string;
+		user_color: string | null;
+		user_badges: string[] | [] | null;
+		message: string;
+		emotes: string[] | [] | null;
+		raw_data: {
+			raw_message: string;
+			raw_emotes: string;
+		};
+		tags: [string, string][];
+	};
+
+	type TwitchMessage = {
+		platform: "twitch";
+		message: TwitchResponse;
+	};
+
+	type YoutubeMessage = {
+		platform: "youtube";
+		message: YoutubeResponse;
+	};
+
+	type PlatformMessage<T extends "twitch" | "youtube"> = T extends "twitch" ? TwitchMessage : T extends "youtube" ? YoutubeMessage : Message;
+
+	type Message = PlatformMessage<"twitch" | "youtube">;
 }
 
 export {}

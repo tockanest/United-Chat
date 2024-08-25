@@ -18,25 +18,32 @@ import {
 	handleResizeStart,
 	useResizeRefs
 } from "@/components/component/Main/Helpers/resizeUtils";
+import TauriApi from "@/lib/Tauri";
 
 const messagesData: Omit<Message['message'], 'timestamp'>[] = [
 	{
-		platform: "twitch",
-		user: "user1",
-		formated_message: "Hello, this is a test message.",
-		raw_message: "Hello, this is a test message.",
-		color: "#FF0000",
-		badges: ["badge1"],
-		emotes: ["emote1"]
+		display_name: "twitchUser",
+		user_color: "#FF0000",
+		user_badges: ["moderator", "subscriber"],
+		message: "Hello, world!",
+		emotes: [],
+		raw_data: {
+			raw_message: "Hello, world!",
+			raw_emotes: ""
+		},
+		tags: []
 	},
 	{
-		platform: "youtube",
-		user: "user2",
-		formated_message: "Hi, this is another test message.",
-		raw_message: "Hi, this is another test message.",
-		color: "#00FF00",
-		badges: ["badge2"],
-		emotes: ["emote2"]
+		display_name: "youtubeUser",
+		user_color: "#FF0000",
+		user_badges: ["moderator", "subscriber"],
+		message: "Hello, world!",
+		emotes: [],
+		raw_data: {
+			raw_message: "Hello, world!",
+			raw_emotes: ""
+		},
+		tags: []
 	}
 ];
 
@@ -64,9 +71,18 @@ export default function Editor(
 		`<!-- You can use the most common bindings on this editor -->
 <!-- As an example: "CRTL + /" creates this comment line -->
 <!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
+<!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
 <!-- Slashes as comments will get rendered since this is an HTML editor -->
-<div class="flex flex-col items-start justify-center bg-gray-100 m-2 bg-transparent text-white">
-    {platform} - {badges} {user}: {formatedMessage}
+<div class="flex flex-col items-start justify-center bg-gray-100 m-2 bg-transparent text-black">
+    <div class="flex flex-row items-center space-x-2">
+      <!-- The "badges" modifier will include only 3 max badges, excluding the platform badge, this might make the boxed message a little too long  -->
+      <!-- If you don't want to bother selecting which badges you want, you can use the "formatedBadges" -->
+      <!-- "formatedBadges" follow this structure: Platform Badge -> Mod Badge (if any) -> Sub Badge (if any) -> Other badges -->
+      <span>{platform} - {badges}</span>
+      <img src={profile_picture} class="w-6 h-6 rounded rounded-full"/>
+      <p style="color: {color};">{user}</p>
+      <p>{formatedMessage}</p>
+    </div>
 </div>
 
 <!-- Imagination is your limit, do whatever you want. -->
@@ -80,10 +96,9 @@ export default function Editor(
 	const [quickResizeValue, setQuickResizeValue] = useState<string>("15");
 	const [pendingResize, setPendingResize] = useState<boolean>(false);
 	const [combinedCode, setCombinedCode] = useState<string>("");
-	const [messages, setMessages] = useState<Message[]>([]);
+	const [messages, setMessages] = useState<PlatformMessage<"twitch" | "youtube">[]>([]);
 
 	const {resizeRef, editorRef, previewRef, containerRef} = useResizeRefs();
-
 
 	const renderPreviewHeader = () => (
 		<div className="flex items-center space-x-2 px-4 py-2 border-b">
@@ -158,19 +173,31 @@ export default function Editor(
 		};
 	}, [isResizing, handleResize, handleResizeEnd]);
 
+	function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
+		switch (platform) {
+			case "twitch": {
+				return "<img src='/icons/brands/twitch_glitch.svg\' alt='twitch' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>";
+			}
+			case "youtube": {
+				return "<img src='/icons/brands/youtube-color.svg' alt='youtube' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>";
+			}
+		}
+	}
 
-	const replacePlaceholders = (template: string, message: Message["message"]) => {
+	function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
 		return template
-			.replaceAll("{user}", message.user)
-			.replaceAll("{formatedMessage}", message.formated_message)
-			.replaceAll("{raw_message}", message.raw_message)
-			.replaceAll("{color}", message.color || "")
-			.replaceAll("{platform}", message.platform)
-			.replaceAll("{badges}", message.badges?.join(" ") || "");
-	};
+			.replaceAll("{user}", message.display_name)
+			.replaceAll("{formatedMessage}", message.message)
+			.replaceAll("{raw_message}", message.raw_data.raw_message)
+			.replaceAll("{color}", message.user_color || "")
+			.replaceAll("{profile_picture}", "")
+			.replaceAll("{platform}", formatPlatformBadge(platform))
+			.replaceAll("{\" \"}", "⠀")
+			.replaceAll("{badges}", message.user_badges?.join(" ") || "");
+	}
 
 	useEffect(() => {
-		const formattedMessages = messages.map(msg => replacePlaceholders(htmlCode, msg.message)).join('');
+		const formattedMessages = messages.map(msg => replacePlaceholders(htmlCode, msg.message, msg.platform)).join('');
 		setCombinedCode(`
       <html>
         <head>
@@ -191,16 +218,18 @@ export default function Editor(
 	useEffect(() => {
 		let messageIndex = 0;
 
-		const interval = setInterval(() => {
+		TauriApi.ListenEvent("chat-data::twitch", (data: TwitchResponse) => {
 			const newMessage = {
-				...messagesData[messageIndex],
-				message: {...messagesData[messageIndex], timestamp: Date.now()}
+				platform: "twitch",
+				message: {
+					...data,
+					timestamp: Date.now()
+				}
 			};
-			setMessages((prevMessages) => [...prevMessages, newMessage]);
-			messageIndex = (messageIndex + 1) % messagesData.length;
-		}, 5000);
+			setMessages((prevMessages) => [...prevMessages, newMessage as PlatformMessage<"twitch" | "youtube">]);
+		})
 
-		return () => clearInterval(interval);
+
 	}, []);
 
 	useEffect(() => {
