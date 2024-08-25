@@ -4,10 +4,11 @@
 And I lied to you, it might be a little bit complex to set things up, but it's not that hard, I promise!
 
 TODO:
-- [ ] Make the UI
+- [X] Make the UI
 - [ ] Create the Rust BackEnd
-- [ ] Make the message pulling system
+- [ ] Make the message polling system
 
+This is NOT functional yet. You can expect it to be working at least for twitch in the next few days (Today is 24/08/2024 [dd/mm/yyyy])
 
 Note to self: 
 
