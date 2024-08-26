@@ -15,8 +15,6 @@ export default function UnitedChat() {
                 setUser(user)
             }
         })
-
-        Tauri.ConnectTwitchWebsocket()
     }, [])
 
 

@@ -66,7 +66,8 @@ export const handleResizeEnd = (
 			? (editorRect.width / containerRect.width) * 100
 			: (editorRect.height / containerRect.height) * 100;
 		setEditorSize(newEditorSize);
-		setQuickResizeValue(String(100 - newEditorSize));
+		console.log(String(newEditorSize));
+		setQuickResizeValue(String(newEditorSize));
 	}
 
 	setQuickResizeValue(String(100 - editorSize));

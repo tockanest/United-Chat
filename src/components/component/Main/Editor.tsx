@@ -2,7 +2,7 @@ import React, {useEffect, useState} from "react";
 import {getLayoutIcon, getSeparatorStyle} from "@/components/component/Main/Helpers/MainFrame";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Button} from "@/components/ui/button";
-import {AlertCircle, LayoutIcon, SaveIcon} from "lucide-react";
+import {AlertCircle, LayoutIcon, Pause, Play, SaveIcon} from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import {html} from "@codemirror/lang-html";
 import {dracula} from "@uiw/codemirror-theme-dracula";
@@ -19,34 +19,6 @@ import {
 	useResizeRefs
 } from "@/components/component/Main/Helpers/resizeUtils";
 import TauriApi from "@/lib/Tauri";
-
-const messagesData: Omit<Message['message'], 'timestamp'>[] = [
-	{
-		display_name: "twitchUser",
-		user_color: "#FF0000",
-		user_badges: ["moderator", "subscriber"],
-		message: "Hello, world!",
-		emotes: [],
-		raw_data: {
-			raw_message: "Hello, world!",
-			raw_emotes: ""
-		},
-		tags: []
-	},
-	{
-		display_name: "youtubeUser",
-		user_color: "#FF0000",
-		user_badges: ["moderator", "subscriber"],
-		message: "Hello, world!",
-		emotes: [],
-		raw_data: {
-			raw_message: "Hello, world!",
-			raw_emotes: ""
-		},
-		tags: []
-	}
-];
-
 
 type EditorProps = {
 	setPreviewPosition: React.Dispatch<React.SetStateAction<PreviewPosition>>,
@@ -67,28 +39,7 @@ export default function Editor(
 		user
 	}: EditorProps
 ) {
-	const [htmlCode, setHtmlCode] = useState<string>(
-		`<!-- You can use the most common bindings on this editor -->
-<!-- As an example: "CRTL + /" creates this comment line -->
-<!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
-<!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
-<!-- Slashes as comments will get rendered since this is an HTML editor -->
-<div class="flex flex-col items-start justify-center bg-gray-100 m-2 bg-transparent text-black">
-    <div class="flex flex-row items-center space-x-2">
-      <!-- The "badges" modifier will include only 3 max badges, excluding the platform badge, this might make the boxed message a little too long  -->
-      <!-- If you don't want to bother selecting which badges you want, you can use the "formatedBadges" -->
-      <!-- "formatedBadges" follow this structure: Platform Badge -> Mod Badge (if any) -> Sub Badge (if any) -> Other badges -->
-      <span>{platform} - {badges}</span>
-      <img src={profile_picture} class="w-6 h-6 rounded rounded-full"/>
-      <p style="color: {color};">{user}</p>
-      <p>{formatedMessage}</p>
-    </div>
-</div>
-
-<!-- Imagination is your limit, do whatever you want. -->
-<!-- After you're done and like what you're seeing, click "Save" to save the theme -->
-<!-- if you don't, you'll lose everything. (PS: AutoSaving is planned) -->`
-	);
+	const [htmlCode, setHtmlCode] = useState<string>("");
 
 	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
 	const [isResizing, setIsResizing] = useState<boolean>(false);
@@ -99,6 +50,8 @@ export default function Editor(
 	const [messages, setMessages] = useState<PlatformMessage<"twitch" | "youtube">[]>([]);
 
 	const {resizeRef, editorRef, previewRef, containerRef} = useResizeRefs();
+
+	const [startWebsocket, setStartWebsocket] = useState<boolean>(false);
 
 	const renderPreviewHeader = () => (
 		<div className="flex items-center space-x-2 px-4 py-2 border-b">
@@ -216,21 +169,36 @@ export default function Editor(
 	}, [htmlCode, cssCode, messages]);
 
 	useEffect(() => {
-		let messageIndex = 0;
-
-		TauriApi.ListenEvent("chat-data::twitch", (data: TwitchResponse) => {
-			const newMessage = {
-				platform: "twitch",
-				message: {
-					...data,
-					timestamp: Date.now()
-				}
-			};
-			setMessages((prevMessages) => [...prevMessages, newMessage as PlatformMessage<"twitch" | "youtube">]);
-		})
-
-
+		const editorTheme = localStorage.getItem("editorTheme") || "default";
+		TauriApi.GetEditorTheme(editorTheme).then((theme) => {
+			setHtmlCode(theme);
+		});
 	}, []);
+
+	useEffect(() => {
+		if (startWebsocket) {
+			TauriApi.ConnectTwitchWebsocket();
+			const eventListener = (data: { payload: TwitchResponse }) => {
+				const newMessage = {
+					platform: "twitch",
+					message: {
+						...data.payload,
+						timestamp: Date.now()
+					}
+				};
+				setMessages((prevMessages) => [...prevMessages, newMessage as PlatformMessage<"twitch" | "youtube">]);
+			};
+
+			// Register the event listener
+			TauriApi.ListenEvent("chat-data::twitch", eventListener);
+		} else {
+			TauriApi.UnsubscribeEvent("chat-data::twitch");
+		}
+
+		return () => {
+			TauriApi.UnsubscribeEvent("chat-data::twitch");
+		};
+	}, [startWebsocket])
 
 	useEffect(() => {
 		const cleanupInterval = setInterval(() => {
@@ -295,10 +263,30 @@ export default function Editor(
 									CSS
 								</TabsTrigger>
 							</TabsList>
-							<Button size="sm" className="bg-green-500 hover:bg-green-600 text-white">
-								<SaveIcon className="h-4 w-4 mr-2"/>
-								Save
-							</Button>
+							<div className={"flex items-center space-x-2"}>
+								<Button size="sm" className="bg-green-500 hover:bg-green-600 text-white">
+									<SaveIcon className="h-4 w-4 mr-2"/>
+									Save
+								</Button>
+								<Button
+									onClick={() => setStartWebsocket(!startWebsocket)}
+									size={"sm"}
+									className={`${startWebsocket ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white`}>
+									{
+										startWebsocket ? (
+											<>
+												<Pause className={"h-4 w-4 mr-2"}/>
+												Stop
+											</>
+										) : (
+											<>
+												<Play className={"h-4 w-4 mr-2"}/>
+												Start
+											</>
+										)
+									}
+								</Button>
+							</div>
 						</div>
 						<TabsContent value="html"
 						             className={`flex-grow flex overflow-hidden p-0 h-screen ${editorSelected !== "html" ? "hidden" : ""}`}>

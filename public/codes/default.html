@@ -1,0 +1,20 @@
+<!-- You can use the most common bindings on this editor -->
+<!-- As an example: "CRTL + /" creates this comment line -->
+<!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
+<!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
+<!-- Slashes as comments will get rendered since this is an HTML editor -->
+<div class="flex flex-col items-start justify-center bg-gray-100 m-2 bg-transparent text-black">
+    <div class="flex flex-row items-center space-x-2">
+        <!-- The "badges" modifier will include only 3 max badges, excluding the platform badge, this might make the boxed message a little too long  -->
+        <!-- If you don't want to bother selecting which badges you want, you can use the "formatedBadges" -->
+        <!-- "formatedBadges" follow this structure: Platform Badge -> Mod Badge (if any) -> Sub Badge (if any) -> Other badges -->
+        <span>{platform} - {badges}</span>
+        <img src={profile_picture} class="w-6 h-6 rounded rounded-full"/>
+        <p style="color: {color};">{user}</p>
+        <p>{formatedMessage}</p>
+    </div>
+</div>
+
+<!-- Imagination is your limit, do whatever you want. -->
+<!-- After you're done and like what you're seeing, click "Save" to save the theme -->
+<!-- if you don't, you'll lose everything. (PS: AutoSaving is planned) -->

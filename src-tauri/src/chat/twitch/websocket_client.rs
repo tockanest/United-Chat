@@ -1,105 +1,51 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
+use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
 use futures::{SinkExt, StreamExt};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State};
+use std::sync::Arc;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::sync::Mutex;
 use tokio_tungstenite::connect_async;
 
-fn parse_twitch_message(message: &str) -> Option<(String, String, String)> {
-    let re = Regex::new(r"@(?P<tags>[^ ]*) (?P<username>[^!]+)!.* PRIVMSG #[^ ]* :(?P<message>.*)")
-        .unwrap();
-    if let Some(caps) = re.captures(message) {
-        let tags = &caps["tags"];
-        let username = &caps["username"];
-        let message = &caps["message"];
-
-        return Some((tags.to_string(), username.to_string(), message.to_string()));
-    }
-    None
-}
-
-fn parse_twitch_tags(tags_str: &str) -> Vec<(&str, &str)> {
-    let tags_vec: Vec<&str> = tags_str.split(';').collect();
-    let mut tags: Vec<(&str, &str)> = Vec::new();
-    for tag in tags_vec {
-        let mut tag_parts = tag.splitn(2, '=');
-        let name = tag_parts.next().unwrap_or("");
-        let value = tag_parts.next().unwrap_or("");
-        // Return a vector of tuples with the tag name and value
-        tags.push((name, value));
-    }
-
-    tags
-}
-
-fn construct_emote_url(emote_id: &str) -> String {
-    format!(
-        "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/dark/1.0",
-        emote_id
-    )
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TwitchBadgeVersion {
-    id: String,
-    image_url_1x: String,
-    image_url_2x: String,
-    image_url_4x: String,
-    title: String,
-    description: String,
-    click_action: String,
-    click_url: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TwitchBadgeSet {
-    set_id: String,
-    versions: Vec<TwitchBadgeVersion>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TwitchBadgesResponse {
-    data: Vec<TwitchBadgeSet>,
-}
-
-async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) -> TwitchBadgesResponse {
-    let client = reqwest::Client::new();
-
-    let req = client
-        .get(format!("https://api.twitch.tv/helix/chat/badges?broadcaster_id={}", user_state.user_id))
-        .header("Client-ID", "h3yvglc6y3kmtrzyq7it20z7vi5sa2")
-        .header("Authorization", format!("Bearer {}", auth_state.access_token))
-        .send()
-        .await
-        .unwrap();
-
-    let badges: TwitchBadgesResponse = req.json().await.unwrap();
-
-    badges
-}
-
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct RawTwitchResponse {
     raw_message: String,
     raw_emotes: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct TwitchResponse {
     timestamp: String,
     display_name: String,
     user_color: String,
     user_badges: Vec<String>,
     message: String,
-    emotes: Vec<String, String>,
+    emotes: Vec<(String, String)>,
     raw_data: RawTwitchResponse,
     tags: Vec<(String, String)>,
 }
 
+#[derive(Default)]
+pub(crate) struct TwitchWebsocketChat {
+    pub(crate) ws_stream_initialized: Arc<Mutex<bool>>,
+}
+
 #[tauri::command]
 pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
+    let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
+
+    {
+        let mut ws_initialized = websocket_connection.lock().await;
+        if *ws_initialized {
+            return;
+        }
+
+        *ws_initialized = true;
+    }
+
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
         .unwrap_or_else(|e| panic!("Error during handshake: {}", e));
-
 
     ws_stream
         .send("NICK justinfan1234".into())
@@ -214,20 +160,19 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
 
                         let response = TwitchResponse {
                             timestamp: chrono::Utc::now().to_rfc3339(),
-                            display_name: display_name.unwrap_or(&username.into()).to_string(),
-                            user_color: color.unwrap_or("".into()).to_string(),
+                            display_name: display_name.unwrap_or(&username).to_string(),
+                            user_color: color.unwrap_or(&"".into()).to_string(),
                             user_badges,
                             message: msg,
                             emotes: parsed_emotes,
                             raw_data: RawTwitchResponse {
-                            raw_message: content,
-                            raw_emotes: emotes.to_string(),
-                        },
-                        tags: parsed_tags.into(),
-                    };
+                                raw_message: content,
+                                raw_emotes: emotes.to_string(),
+                            },
+                            tags: parsed_tags,
+                        };
 
-                    app.emit_to("main", "chat-data::twitch", response).unwrap();
-
+                        app.emit_to("main", "chat-data::twitch", response).unwrap();
                     }
                 }
             }
