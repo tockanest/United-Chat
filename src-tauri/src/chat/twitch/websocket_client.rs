@@ -1,11 +1,14 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
+use crate::chat::twitch::helpers::ws_server::WebSocketServer;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 use tokio_tungstenite::connect_async;
+use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct RawTwitchResponse {
@@ -15,7 +18,7 @@ struct RawTwitchResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct TwitchResponse {
-    timestamp: String,
+    timestamp: i64,
     display_name: String,
     user_color: String,
     user_badges: Vec<String>,
@@ -42,6 +45,18 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
 
         *ws_initialized = true;
     }
+
+    let ws_server = Arc::new(WebSocketServer::new());
+    let ws_server_clone = Arc::clone(&ws_server);
+    println!("Starting WebSocket server...");
+    tokio::spawn(async move {
+        if let Err(e) = ws_server_clone.run("127.0.0.1:9001").await {
+            eprintln!("WebSocket server error: {}", e);
+        } else {
+            println!("WebSocket server started successfully");
+        }
+    });
+    println!("WebSocket server spawn initiated.");
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
@@ -159,7 +174,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                         }
 
                         let response = TwitchResponse {
-                            timestamp: chrono::Utc::now().to_rfc3339(),
+                            timestamp: chrono::Utc::now().timestamp(),
                             display_name: display_name.unwrap_or(&username).to_string(),
                             user_color: color.unwrap_or(&"".into()).to_string(),
                             user_badges,
@@ -172,6 +187,13 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                             tags: parsed_tags,
                         };
 
+                        // Add "platform" to the websocket response
+                        let ws_response = json!({
+                            "platform": "twitch",
+                            "data": response
+                        });
+
+                        ws_server.broadcast(Message::Text(serde_json::to_string(&ws_response).unwrap())).await;
                         app.emit_to("main", "chat-data::twitch", response).unwrap();
                     }
                 }

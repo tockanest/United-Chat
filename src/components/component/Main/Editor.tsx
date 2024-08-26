@@ -2,7 +2,7 @@ import React, {useEffect, useState} from "react";
 import {getLayoutIcon, getSeparatorStyle} from "@/components/component/Main/Helpers/MainFrame";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Button} from "@/components/ui/button";
-import {AlertCircle, LayoutIcon, Pause, Play, SaveIcon} from "lucide-react";
+import {AlertCircle, CheckIcon, CopyIcon, LayoutIcon, LinkIcon, Pause, Play, SaveIcon} from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import {html} from "@codemirror/lang-html";
 import {dracula} from "@uiw/codemirror-theme-dracula";
@@ -19,6 +19,16 @@ import {
 	useResizeRefs
 } from "@/components/component/Main/Helpers/resizeUtils";
 import TauriApi from "@/lib/Tauri";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from "@/components/ui/alert-dialog";
+import {cn} from "@/lib/utils";
 
 type EditorProps = {
 	setPreviewPosition: React.Dispatch<React.SetStateAction<PreviewPosition>>,
@@ -27,6 +37,10 @@ type EditorProps = {
 	setEditorSize: React.Dispatch<React.SetStateAction<number>>,
 	showPreview: boolean,
 	user: UserInformation | null,
+}
+
+function removeComments(html: string): string {
+	return html.replace(/<!--[\s\S]*?-->/g, '');
 }
 
 export default function Editor(
@@ -39,15 +53,21 @@ export default function Editor(
 		user
 	}: EditorProps
 ) {
-	const [htmlCode, setHtmlCode] = useState<string>("");
 
-	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
 	const [isResizing, setIsResizing] = useState<boolean>(false);
 	const [editorSelected, setEditorSelected] = useState<string>('html');
 	const [quickResizeValue, setQuickResizeValue] = useState<string>("15");
 	const [pendingResize, setPendingResize] = useState<boolean>(false);
+
+	const [htmlCode, setHtmlCode] = useState<string>("");
+	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
 	const [combinedCode, setCombinedCode] = useState<string>("");
 	const [messages, setMessages] = useState<PlatformMessage<"twitch" | "youtube">[]>([]);
+
+	const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+	const [dialogMessage, setDialogMessage] = useState<string>("");
+	const [copied, setCopied] = useState(false)
+	const [webChatWindowShown, setWebChatWindowShown] = useState<boolean>(false);
 
 	const {resizeRef, editorRef, previewRef, containerRef} = useResizeRefs();
 
@@ -169,7 +189,7 @@ export default function Editor(
 	}, [htmlCode, cssCode, messages]);
 
 	useEffect(() => {
-		const editorTheme = localStorage.getItem("editorTheme") || "default";
+		const editorTheme = localStorage.getItem("chatTheme") || "default";
 		TauriApi.GetEditorTheme(editorTheme).then((theme) => {
 			setHtmlCode(theme);
 		});
@@ -200,19 +220,71 @@ export default function Editor(
 		};
 	}, [startWebsocket])
 
+
 	useEffect(() => {
 		const cleanupInterval = setInterval(() => {
 			const now = Date.now();
 
-			// Check if message is older than 10 seconds
+			// Check if a message is older than 10 seconds
 			setMessages((prevMessages) => prevMessages.filter((msg) => now - msg.message.timestamp < 10000));
 		}, 1000);
 
 		return () => clearInterval(cleanupInterval);
 	}, []);
 
+	const handleCopy = () => {
+		navigator.clipboard.writeText(dialogMessage)
+		setCopied(true)
+		setTimeout(() => setCopied(false), 2000)
+	}
+
+
 	return (
 		<main className="flex-grow flex overflow-hidden">
+			<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+				<AlertDialogContent className="sm:max-w-[425px]">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="text-2xl">Use this URL!</AlertDialogTitle>
+						<AlertDialogDescription className="text-center">
+							Use the URL below to view the chat in a browser.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<div className="bg-secondary p-3 rounded-md">
+						<div className="relative flex items-center">
+							<LinkIcon
+								className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
+							<Input
+								value={dialogMessage}
+								className="pl-9 pr-12 bg-gray-500 text-center font-medium"
+								readOnly
+							/>
+							<Button
+								size="sm"
+								variant="ghost"
+								className={cn(
+									"absolute right-1 top-1/2 -translate-y-1/2",
+									copied && "text-green-500"
+								)}
+								onClick={handleCopy}
+							>
+								{copied ? <CheckIcon className="h-4 w-4"/> : <CopyIcon className="h-4 w-4"/>}
+							</Button>
+						</div>
+					</div>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => setShowConfirmDialog(false)}>
+							Close
+						</AlertDialogAction>
+						<AlertDialogAction onClick={() => {
+							setShowConfirmDialog(false)
+							setWebChatWindowShown(true)
+							TauriApi.OpenWebChatWindow(dialogMessage);
+						}}>
+							Open
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<div ref={containerRef}
 			     className={`flex ${previewPosition === 'bottom' || previewPosition === 'top' ? 'flex-col' : 'flex-row'} w-full h-full resize-container`}>
 				{(previewPosition === 'top' || previewPosition === 'left') && showPreview && (
@@ -269,7 +341,26 @@ export default function Editor(
 									Save
 								</Button>
 								<Button
-									onClick={() => setStartWebsocket(!startWebsocket)}
+									onClick={() => {
+										if (!startWebsocket) {
+											const cleanedHtmlCode = removeComments(htmlCode); // Remove comments
+											const base64HtmlCode = btoa(cleanedHtmlCode); // Encode to Base64
+											const url = `/webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}`;
+
+											TauriApi.GetAppUrl().then((appUrl) => {
+												const fullUrl = `${appUrl}${url}`;
+												setDialogMessage(fullUrl);
+												setShowConfirmDialog(true);
+											})
+										}
+
+										if(webChatWindowShown) {
+											TauriApi.CloseWebChatWindow();
+											setWebChatWindowShown(false);
+										}
+
+										setStartWebsocket(!startWebsocket);
+									}}
 									size={"sm"}
 									className={`${startWebsocket ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white`}>
 									{
@@ -331,7 +422,7 @@ export default function Editor(
 							<iframe
 								srcDoc={combinedCode}
 								title="preview"
-								className="w-full h-full border-0 chat-container"
+								className="w-full h-full"
 							/>
 						</div>
 					</>

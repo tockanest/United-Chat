@@ -9,25 +9,80 @@ pub(crate) fn get_theme(theme: String) -> String {
 <!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
 <!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
 <!-- Slashes as comments will get rendered since this is an HTML editor -->
-<div class="flex flex-col items-start justify-center bg-transparent m-2 text-black ">
-    <div class="flex flex-row items-center">
-      <!-- The "badges" modifier will include only 3 max badges, excluding the platform badge, this might make the boxed message a little too long  -->
-      <!-- If you don't want to bother selecting which badges you want, you can use the "formatedBadges" -->
-      <!-- "formatedBadges" follow this structure: Platform Badge -> Mod Badge (if any) -> Sub Badge (if any) -> Other badges -->
-      <div class="flex flex-row items-center">
-        {platform}
-        <img class="w-6 h-6" src={badges} alt="badge"/>
-      </div>
-      <div class="flex flex-row items-center space-x-0.5">
-        <p style="color: {color};">{user}</p>:
-        <p>{formatedMessage}</p>
-      </div>
+<div class="w-full h-full">
+    <!--
+    Outer container that takes up the full width and height of its parent.
+    This ensures that all the content inside has the necessary space to render fully.
+    -->
+    <div class="flex flex-col items-start justify-center bg-transparent m-2 text-black max-w-[600px]">
+        <!--
+        Inner flex container holding the platform badge, username, and message.
+        The 'flex-col' layout makes the inner elements stack vertically.
+        The 'items-start' aligns all the items at the top of this container, preventing vertical misalignment.
+        The 'max-w-[600px]' ensures that this container does not exceed 600px in width, preventing overflow.
+        -->
+        <div class="flex flex-row items-start w-full">
+            <!--
+            Flex container for the platform and user badges.
+            'flex-row' arranges the badges horizontally.
+            'items-start' ensures these badges align at the top, preventing them from stretching vertically.
+            -->
+            <div class="flex flex-row items-start">
+                <!-- Placeholder for platform-specific badge (e.g., Twitch, YouTube) -->
+                {platform}
+                <!-- Displays user badges next to the platform badge -->
+                <img class="w-6 h-6" src={badges} alt="badge"/>
+            </div>
+
+            <!--
+            Flex container for the username and message.
+            'flex-row' arranges the username and message side by side.
+            'items-start' ensures that both the username and message align at the top, which is crucial for keeping the username from being vertically centered when the message is long.
+            'space-x-0.5' adds a small space between the username and the message.
+            -->
+            <div class="flex flex-row items-start space-x-0.5 w-full break-words overflow-hidden text-ellipsis">
+                <!--
+                The username is styled with 'flex-none' to prevent it from stretching.
+                This ensures the username stays fixed in size, maintaining its position at the top left of the container, regardless of the message length.
+                The 'color' style is dynamically set based on user preference or platform data.
+                -->
+                <p style="color: {color};" class="flex-none">{user}</p>:
+
+                <!--
+                 The message text is placed in a flexible container ('flex-1') that allows it to take up the remaining space next to the username.
+                'break-words' ensures that words break to the next line if they exceed the container width, preventing horizontal scrolling or overflow.
+                'overflow-hidden' prevents any text that exceeds the container from spilling out, ensuring a clean layout.
+                'whitespace-pre-wrap' preserves whitespace in the message text and wraps lines as necessary, ensuring the message is displayed as entered, while respecting the container boundaries.
+                'text-ellipsis' adds an ellipsis (...) if the text overflows, but since 'break-words' and 'overflow-hidden' are in place, this is more of a fallback measure.
+                -->
+                <p class="flex-1 break-words overflow-hidden whitespace-pre-wrap">{formatedMessage}</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Imagination is your limit, do whatever you want. -->
 <!-- After you're done and like what you're seeing, click "Save" to save the theme -->
-<!-- if you don't, you'll lose everything. (PS: AutoSaving is planned) -->"#.to_string();
+<!-- if you don't, you'll lose everything. (PS: AutoSaving is planned) -->
+<!-- If you're having problems with line breaking messages, please use this example to format your styling accordingly. -->
+<!--
+    ### Detailed Explanation of Word Breaking and Overflow Handling:
+    1. **`break-words`**:
+       - **Purpose**: Forces the text to break onto a new line if a word is too long to fit within the container.
+       - **Why It’s Important**: Without this, long words (or strings with no spaces, like URLs) might overflow out of the container, causing layout issues. By enabling word breaking, we ensure that all content stays within its designated area.
+
+    2. **`overflow-hidden`**:
+       - **Purpose**: Ensures that any content that exceeds the container boundaries is hidden.
+       - **Why It’s Important**: This prevents text or other content from spilling out of its container, which can disrupt the layout and create a poor user experience. In combination with `break-words`, this ensures that content stays visually contained within its intended area.
+
+    3. **`whitespace-pre-wrap`**:
+       - **Purpose**: Preserves the whitespace in the message as it was entered, and wraps text as necessary.
+       - **Why It’s Important**: This setting respects the original formatting of the message (including spaces and line breaks) while ensuring the text wraps properly within the container. It’s particularly useful for maintaining the readability of user-generated content.
+
+    4. **`text-ellipsis`**:
+       - **Purpose**: Adds an ellipsis (`...`) if the content is too long to fit within the container.
+       - **Why It’s Important**: Although `break-words` and `overflow-hidden` manage most of the overflow issues, `text-ellipsis` acts as a safety net, ensuring that if any text does somehow exceed its container, it’s truncated gracefully with an ellipsis.
+-->"#.to_string();
 
     if !theme_dirs.exists() {
         std::fs::create_dir_all(theme_dirs.clone()).unwrap();

@@ -51,6 +51,17 @@ export default class TauriApi {
 		return await this.command<void>("ws_disconnect", {});
 	}
 
+	public static async GetAppUrl() {
+		return await this.command<string>("get_app_url", {});
+	}
+
+	public static async OpenWebChatWindow(url: string) {
+		return await this.command<void>("open_webchat_window", {url});
+	}
+
+	public static async CloseWebChatWindow() {
+		return await this.command<void>("hide_webchat_window", {});
+	}
 
 	public static async GetUserInformation() {
 
