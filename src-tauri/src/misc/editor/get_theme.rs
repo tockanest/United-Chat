@@ -2,14 +2,20 @@ use std::io::Write;
 
 #[tauri::command]
 pub(crate) fn get_theme(theme: String) -> String {
-    let theme_dirs = dirs::config_dir().unwrap().join("United Chat").join("themes");
+    let theme_dirs = dirs::config_dir()
+        .unwrap()
+        .join("United Chat")
+        .join("themes");
 
     let default_theme = r#"<!-- You can use the most common bindings on this editor -->
 <!-- As an example: "CRTL + /" creates this comment line -->
 <!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
 <!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
 <!-- Slashes as comments will get rendered since this is an HTML editor -->
-<div class="w-full h-full">
+
+<!-- If you want your messages to be deleted and do not want to handle it on this editor, PLEASE do not forget to set the main div id -->
+<!-- If you do not handle it yourself and do not set it, the app WILL NOT remove old messages for you. -->
+<div id={id} class="w-full h-full">
     <!--
     Outer container that takes up the full width and height of its parent.
     This ensures that all the content inside has the necessary space to render fully.
@@ -93,11 +99,8 @@ pub(crate) fn get_theme(theme: String) -> String {
         return default_theme;
     }
 
-
     match theme.as_str() {
-        "default" => {
-            default_theme
-        }
+        "default" => default_theme,
         _ => {
             let theme_path = theme_dirs.join(format!("{}.html", theme));
             if theme_path.exists() {

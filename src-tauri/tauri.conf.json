@@ -29,18 +29,6 @@
 				"url": "/splashscreen",
 				"center": true,
 				"closable": false
-			},
-			{
-				"label": "webchat",
-				"title": "United Chat - WebChat",
-				"width": 800,
-				"height": 600,
-				"resizable": true,
-				"visible": false,
-				"url": "/webchat",
-				"center": true,
-				"closable": false,
-				"transparent": true
 			}
 		],
 		"security": {

@@ -345,16 +345,16 @@ export default function Editor(
 										if (!startWebsocket) {
 											const cleanedHtmlCode = removeComments(htmlCode); // Remove comments
 											const base64HtmlCode = btoa(cleanedHtmlCode); // Encode to Base64
-											const url = `/webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}`;
+											const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&fadeOut=true&removalTime=10`;
 
 											TauriApi.GetAppUrl().then((appUrl) => {
-												const fullUrl = `${appUrl}${url}`;
+												const fullUrl = `http://localhost:3000/${url}`;
 												setDialogMessage(fullUrl);
 												setShowConfirmDialog(true);
 											})
 										}
 
-										if(webChatWindowShown) {
+										if (webChatWindowShown) {
 											TauriApi.CloseWebChatWindow();
 											setWebChatWindowShown(false);
 										}

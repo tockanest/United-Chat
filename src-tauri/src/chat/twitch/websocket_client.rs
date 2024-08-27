@@ -1,10 +1,14 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
-use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
+use crate::chat::twitch::helpers::auth_helpers::{
+    construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags,
+};
 use crate::chat::twitch::helpers::ws_server::WebSocketServer;
 use futures::{SinkExt, StreamExt};
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use serde_json::json;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 use tokio_tungstenite::connect_async;
@@ -18,6 +22,7 @@ struct RawTwitchResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct TwitchResponse {
+    id: String,
     timestamp: i64,
     display_name: String,
     user_color: String,
@@ -35,7 +40,8 @@ pub(crate) struct TwitchWebsocketChat {
 
 #[tauri::command]
 pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
-    let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
+    let websocket_connection =
+        Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
 
     {
         let mut ws_initialized = websocket_connection.lock().await;
@@ -50,7 +56,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     let ws_server_clone = Arc::clone(&ws_server);
     println!("Starting WebSocket server...");
     tokio::spawn(async move {
-        if let Err(e) = ws_server_clone.run("127.0.0.1:9001").await {
+        if let Err(e) = ws_server_clone.run("localhost:9888").await {
             eprintln!("WebSocket server error: {}", e);
         } else {
             println!("WebSocket server started successfully");
@@ -62,9 +68,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
         .await
         .unwrap_or_else(|e| panic!("Error during handshake: {}", e));
 
-    ws_stream
-        .send("NICK justinfan1234".into())
-        .await.unwrap();
+    ws_stream.send("NICK justinfan1234".into()).await.unwrap();
 
     while let Some(msg) = ws_stream.next().await {
         let msg = msg.unwrap();
@@ -72,7 +76,10 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
         if msg.to_string().contains("PING") {
             ws_stream.send("PONG :tmi.twitch.tv".into()).await.unwrap();
         } else if msg.to_string().contains("Welcome, GLHF!") {
-            ws_stream.send("CAP REQ :twitch.tv/tags".into()).await.unwrap();
+            ws_stream
+                .send("CAP REQ :twitch.tv/tags".into())
+                .await
+                .unwrap();
             ws_stream.send("JOIN #nixyyi".into()).await.unwrap();
         } else if msg.to_string().contains("PRIVMSG") {
             let msg = msg.to_string();
@@ -173,8 +180,16 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                             }
                         }
 
+                        // Generate a random alphanumeric id for the message
+                        let id: String = rand::thread_rng()
+                            .sample_iter(&Alphanumeric)
+                            .take(16)
+                            .map(char::from)
+                            .collect();
+
                         let response = TwitchResponse {
-                            timestamp: chrono::Utc::now().timestamp(),
+                            id,
+                            timestamp: chrono::Local::now().timestamp_millis(),
                             display_name: display_name.unwrap_or(&username).to_string(),
                             user_color: color.unwrap_or(&"".into()).to_string(),
                             user_badges,
@@ -193,7 +208,9 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                             "data": response
                         });
 
-                        ws_server.broadcast(Message::Text(serde_json::to_string(&ws_response).unwrap())).await;
+                        ws_server
+                            .broadcast(Message::Text(serde_json::to_string(&ws_response).unwrap()))
+                            .await;
                         app.emit_to("main", "chat-data::twitch", response).unwrap();
                     }
                 }

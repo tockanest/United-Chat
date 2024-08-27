@@ -18,17 +18,15 @@ async fn backend_setup(app: AppHandle) {
 
             let app_clone = app.clone();
             // Manage state directly after parsing
-            app_clone.manage(
-                ImplicitGrantFlow {
-                    access_token: parsed.access_token,
-                    scope: parsed.scope,
-                    state: parsed.state,
-                    token_type: parsed.token_type,
-                    error: parsed.error,
-                    error_description: parsed.error_description,
-                    skipped: parsed.skipped,
-                }
-            );
+            app_clone.manage(ImplicitGrantFlow {
+                access_token: parsed.access_token,
+                scope: parsed.scope,
+                state: parsed.state,
+                token_type: parsed.token_type,
+                error: parsed.error,
+                error_description: parsed.error_description,
+                skipped: parsed.skipped,
+            });
 
             let path = dirs::config_dir().unwrap().join("United Chat");
             if !path.exists() {
@@ -40,10 +38,14 @@ async fn backend_setup(app: AppHandle) {
             let file = std::fs::File::open(user_file.clone()).expect("Failed to open file");
             let user: UserInformation = serde_json::from_reader(file).unwrap_or_else(|e| {
                 // Emit an event and panic if the file can't be read
-                app.emit("splashscreen::twitch_auth", json!({
-                    "success": false,
-                    "error": e.to_string()
-                })).expect("Failed to emit setup_complete event");
+                app.emit(
+                    "splashscreen::twitch_auth",
+                    json!({
+                        "success": false,
+                        "error": e.to_string()
+                    }),
+                )
+                .expect("Failed to emit setup_complete event");
                 panic!("Error: {}", e);
             });
 
@@ -61,7 +63,8 @@ async fn backend_setup(app: AppHandle) {
             });
         }
         Err(_) => {
-            app.emit_to("splashscreen", "splashscreen::twitch-reauth", true).unwrap();
+            app.emit_to("splashscreen", "splashscreen::twitch-reauth", true)
+                .unwrap();
             panic!("Twitch auth not found");
         }
     };

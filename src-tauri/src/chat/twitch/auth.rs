@@ -54,7 +54,9 @@ pub(crate) async fn start_twitch_link(client_id: &str, scopes: &str) -> Result<S
     let scopes = scopes.to_string();
 
     use rand::distributions::{Alphanumeric, DistString};
-    let rand_state = Alphanumeric.sample_string(&mut rand::thread_rng(), 32).to_lowercase();
+    let rand_state = Alphanumeric
+        .sample_string(&mut rand::thread_rng(), 32)
+        .to_lowercase();
 
     // Check if we are prod or not
     // let redirect_uri = if cfg!(debug_assertions) {
@@ -103,9 +105,11 @@ fn validate_user(auth: String) -> Result<UserInformation, String> {
             match response.status() {
                 reqwest::StatusCode::OK => {
                     // Convert the response to a JSON object
-                    let response_json: ReqValidateResponse = response.json().expect("Failed to parse response");
+                    let response_json: ReqValidateResponse =
+                        response.json().expect("Failed to parse response");
                     //convert expires_in to a readable format
-                    let expires_in = chrono::Utc::now() + chrono::Duration::seconds(response_json.expires_in);
+                    let expires_in =
+                        chrono::Utc::now() + chrono::Duration::seconds(response_json.expires_in);
 
                     // Return the user information
                     let user = UserInformation {
@@ -143,7 +147,8 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
     let mut is_deep_link = false;
 
     for arg in &args {
-        if arg.starts_with("unitedchat://") { // Adjust the prefix according to your deep link scheme
+        if arg.starts_with("unitedchat://") {
+            // Adjust the prefix according to your deep link scheme
             is_deep_link = true;
             break; // Found a deep link, no need to check further
         }
@@ -152,12 +157,22 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
     if is_deep_link {
         // Break down the arguments by removing the "unitedchat://" prefix and parsing what's in between the nexts slashes
         // For example: "unitedchat://twitch_link?client_id=123&scopes=chat:read" will be parsed to "twitch_link", "client_id=123", "scopes=chat:read"
-        let deep_link_arg = args.iter().find(|arg| arg.starts_with("unitedchat://")).unwrap();
-        let full_path = deep_link_arg.strip_prefix("unitedchat://").unwrap_or(deep_link_arg);
+        let deep_link_arg = args
+            .iter()
+            .find(|arg| arg.starts_with("unitedchat://"))
+            .unwrap();
+        let full_path = deep_link_arg
+            .strip_prefix("unitedchat://")
+            .unwrap_or(deep_link_arg);
         let path_components: Vec<&str> = full_path.split("/").collect();
 
         let query_parameters_str = path_components.last().unwrap_or(&"");
-        let query_parameters: Vec<&str> = query_parameters_str.split('?').last().unwrap_or("").split('&').collect();
+        let query_parameters: Vec<&str> = query_parameters_str
+            .split('?')
+            .last()
+            .unwrap_or("")
+            .split('&')
+            .collect();
 
         match path_components[0] {
             "twitch_link" => {
@@ -171,14 +186,31 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
                 }
 
                 // Now you can access the query parameters using the map
-                let access_token = params_map.get("#access_token").unwrap_or(&"".to_string()).to_string();
-                let scope = params_map.get("scope").unwrap_or(&"".to_string()).to_string();
-                let state = params_map.get("state").unwrap_or(&"".to_string()).to_string();
-                let token_type = params_map.get("token_type").unwrap_or(&"".to_string()).to_string();
+                let access_token = params_map
+                    .get("#access_token")
+                    .unwrap_or(&"".to_string())
+                    .to_string();
+                let scope = params_map
+                    .get("scope")
+                    .unwrap_or(&"".to_string())
+                    .to_string();
+                let state = params_map
+                    .get("state")
+                    .unwrap_or(&"".to_string())
+                    .to_string();
+                let token_type = params_map
+                    .get("token_type")
+                    .unwrap_or(&"".to_string())
+                    .to_string();
 
                 // Check if any of them are empty, and if one of them are, reset the setup
-                if access_token.is_empty() || scope.is_empty() || state.is_empty() || token_type.is_empty() {
-                    app.emit("splashscreen::twitch_auth", false).expect("Failed to emit setup_complete event");
+                if access_token.is_empty()
+                    || scope.is_empty()
+                    || state.is_empty()
+                    || token_type.is_empty()
+                {
+                    app.emit("splashscreen::twitch_auth", false)
+                        .expect("Failed to emit setup_complete event");
                 } else {
                     // If all query parameters are present, emit the setup_complete event with the query parameters
 
@@ -194,8 +226,12 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
                     let user_file = path.join("twitch-auth.json");
                     std::fs::File::create(user_file.clone()).expect("Failed to create file");
 
-                    let mut file = OpenOptions::new().write(true).open(user_file).expect("Failed to open file");
-                    file.write_all(serde_json::to_string(&user).unwrap().as_bytes()).expect("Failed to write to file");
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .open(user_file)
+                        .expect("Failed to open file");
+                    file.write_all(serde_json::to_string(&user).unwrap().as_bytes())
+                        .expect("Failed to write to file");
 
                     let state = ImplicitGrantFlow {
                         access_token,
@@ -208,12 +244,14 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
                     };
                     app.manage(state.clone());
 
-                    let entry = Entry::new("united-chat", "twitch-auth").unwrap_or_else(|e| panic!("Error: {}", e));
+                    let entry = Entry::new("united-chat", "twitch-auth")
+                        .unwrap_or_else(|e| panic!("Error: {}", e));
                     entry
                         .set_password(&serde_json::to_string(&state).unwrap())
                         .unwrap_or_else(|e| panic!("Error: {}", e));
 
-                    app.emit("splashscreen::twitch_auth", true).expect("Failed to emit setup_complete event");
+                    app.emit("splashscreen::twitch_auth", true)
+                        .expect("Failed to emit setup_complete event");
                 }
             }
             _ => {

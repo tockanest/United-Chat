@@ -41,7 +41,13 @@ impl WebSocketServer {
 
             let clients = Arc::clone(&self.clients);
             let client_addresses = Arc::clone(&self.client_addresses);
-            tokio::spawn(Self::handle_connection(ws_stream, rx, clients, client_addresses, addr_str));
+            tokio::spawn(Self::handle_connection(
+                ws_stream,
+                rx,
+                clients,
+                client_addresses,
+                addr_str,
+            ));
         }
         Ok(())
     }

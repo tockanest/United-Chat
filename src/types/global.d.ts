@@ -15,6 +15,7 @@ declare global {
 	}
 
 	type TwitchResponse = {
+		id: string;
 		timestamp: number
 		display_name: string,
 		user_color: string | null,
@@ -30,6 +31,7 @@ declare global {
 
 	// This will change 100%, do not expect this to work on next update
 	type YoutubeResponse = {
+		id: string,
 		timestamp: number;
 		display_name: string;
 		user_color: string | null;
@@ -55,7 +57,10 @@ declare global {
 
 	type PlatformMessage<T extends "twitch" | "youtube"> = T extends "twitch" ? TwitchMessage : T extends "youtube" ? YoutubeMessage : Message;
 
-	type Message = PlatformMessage<"twitch" | "youtube">;
+	type Message = PlatformMessage<"twitch" | "youtube"> & {
+		fadingOut?: boolean;
+		fullyFadedOut?: boolean;
+	};
 }
 
 export {}

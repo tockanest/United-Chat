@@ -60,13 +60,22 @@ pub(crate) struct TwitchBadgesResponse {
     pub(crate) data: Vec<TwitchBadgeSet>,
 }
 
-pub(crate) async fn get_chat_badges(auth_state: State<'_, ImplicitGrantFlow>, user_state: State<'_, UserInformation>) -> TwitchBadgesResponse {
+pub(crate) async fn get_chat_badges(
+    auth_state: State<'_, ImplicitGrantFlow>,
+    user_state: State<'_, UserInformation>,
+) -> TwitchBadgesResponse {
     let client = reqwest::Client::new();
 
     let req = client
-        .get(format!("https://api.twitch.tv/helix/chat/badges?broadcaster_id={}", user_state.user_id))
+        .get(format!(
+            "https://api.twitch.tv/helix/chat/badges?broadcaster_id={}",
+            user_state.user_id
+        ))
         .header("Client-ID", "h3yvglc6y3kmtrzyq7it20z7vi5sa2")
-        .header("Authorization", format!("Bearer {}", auth_state.access_token))
+        .header(
+            "Authorization",
+            format!("Bearer {}", auth_state.access_token),
+        )
         .send()
         .await
         .unwrap();
