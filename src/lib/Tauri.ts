@@ -1,11 +1,6 @@
 export default class TauriApi {
 	private static eventSubscriptions = new Map<string, () => void>();
 
-	private static async command<T>(command: string, args: any): Promise<T> {
-		const {invoke} = await import('@tauri-apps/api/core');
-		return invoke(command, args);
-	}
-
 	/** Twitch Linking Process */
 
 	public static async StartLinking() {
@@ -51,10 +46,6 @@ export default class TauriApi {
 		return await this.command<void>("ws_disconnect", {});
 	}
 
-	public static async GetAppUrl() {
-		return await this.command<string>("get_app_url", {});
-	}
-
 	public static async OpenWebChatWindow(url: string) {
 		return await this.command<void>("open_webchat_window", {url});
 	}
@@ -83,7 +74,6 @@ export default class TauriApi {
 		this.eventSubscriptions.set(event, unsub);
 	}
 
-
 	public static async ListenEventOnce(event: string, callback: (event: any) => void) {
 		const {once} = await import('@tauri-apps/api/event');
 		return await once(event, callback);
@@ -95,6 +85,11 @@ export default class TauriApi {
 			unsub(); // Call the Unsub function to unsubscribe
 			this.eventSubscriptions.delete(event); // Clean up the reference
 		}
+	}
+
+	private static async command<T>(command: string, args: any): Promise<T> {
+		const {invoke} = await import('@tauri-apps/api/core');
+		return invoke(command, args);
 	}
 }
 

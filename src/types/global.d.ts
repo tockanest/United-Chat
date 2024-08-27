@@ -61,6 +61,18 @@ declare global {
 		fadingOut?: boolean;
 		fullyFadedOut?: boolean;
 	};
+
+	interface ConfigState {
+		scaling: boolean
+		scalingValue: number
+		fadeOut: boolean
+		messageRemoveTimer: number
+		maxMessages: number
+		maxWidth: number
+		maxHeight: number
+		currentWidth: number
+		currentHeight: number
+	}
 }
 
 export {}

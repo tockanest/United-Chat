@@ -79,7 +79,7 @@ export function handleQuickResize(e: React.ChangeEvent<HTMLInputElement>, setQui
 		setQuickResizeValue(value);
 		setPendingResize(true);
 	}
-};
+}
 
 export function handleQuickResizeBlur(
 	quickResizeValue: string,
@@ -99,5 +99,5 @@ export const useResizeRefs = () => {
 	const previewRef = useRef<HTMLDivElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 
-	return { resizeRef, editorRef, previewRef, containerRef };
+	return {resizeRef, editorRef, previewRef, containerRef};
 };

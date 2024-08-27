@@ -1,11 +1,6 @@
 use tauri::{AppHandle, Manager, Url};
 
 #[tauri::command]
-pub(crate) fn get_app_url(app: AppHandle) -> Url {
-    app.get_webview_window("main").unwrap().url().unwrap()
-}
-
-#[tauri::command]
 pub(crate) fn open_webchat_window(url: String, app: AppHandle) {
     let mut webchat = app.get_webview_window("webchat").unwrap();
     // Show the webchat window with the URL loaded

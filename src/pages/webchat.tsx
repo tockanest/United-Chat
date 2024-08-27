@@ -1,4 +1,4 @@
-import {useEffect, useState, useRef, useCallback} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/router";
 import moment from "moment";
 import {replacePlaceholders} from "@/components/component/Main/Helpers/webChatUtils";
@@ -11,19 +11,29 @@ export default function WebChat() {
 	const {
 		htmlTemplate,
 		fadeOut,
-		removalTime,
-		maxMessages
+		removalTimer,
+		maxMessages,
+		currentWidth,
+		currentHeight,
+		maxWidth,
+		maxHeight,
+		scaling,
+		scalingValue,
+		isDebug
 	} = router.query;
 
 	const decodedHtmlTemplate = htmlTemplate ? atob(decodeURIComponent(htmlTemplate as string)) : '';
-	const removalTimeSeconds = Number(removalTime) || 10; // Convert to number
+	const removalTimeSeconds = Number(removalTimer)
 	const fadeOutEnabled = fadeOut === "true"; // Determine if fade-out is enabled
-	const messagesLimit = Number(maxMessages) || 10; // Convert to number
+	const messagesLimit = Number(maxMessages)
+	const width = Number(currentWidth)
+	const height = Number(currentHeight)
+	const divMaxWidth = Number(maxWidth)
+	const divMaxHeight = Number(maxHeight)
+	const scalingEnabled = scaling === "true"; // Determine if scaling is enabled
+	const scalingFactor = Number(scalingValue)
 
-	useEffect(() => {
-		console.log("Fade Out: ", fadeOutEnabled)
-		console.log("Removal Time: ", removalTimeSeconds)
-	}, [fadeOutEnabled, removalTimeSeconds]);
+	const debug = isDebug === "true"; // Determine if debug mode is enabled
 
 	const [messages, setMessages] = useState<Message[]>([]);
 
@@ -76,6 +86,7 @@ export default function WebChat() {
 		}
 	}, [messages]);
 
+
 	useEffect(() => {
 		if (messagesToRemove.size > 0) {
 			setMessages(prevMessages => prevMessages.filter(msg => !messagesToRemove.has(msg.message.id)));
@@ -85,6 +96,10 @@ export default function WebChat() {
 	}, [messagesToRemove]);
 
 	useEffect(() => {
+		if (debug) {
+			console.log("Debug mode enabled, skipping message cleanup");
+			return;
+		}
 		const cleanupInterval = setInterval(() => {
 			const now = moment();
 
@@ -123,7 +138,7 @@ export default function WebChat() {
 			setMessages(prevMessages => prevMessages.slice(1)); // Remove the oldest message
 			fadeQueueRef.current.delete(oldestMessageId); // Also remove from fade queue if present
 		}
-	}, [messages]); // Run this effect whenever the messages array changes
+	}, [messages]); // Run this effect whenever the message array changes
 
 	useEffect(() => {
 		const ws = new WebSocket('ws://localhost:9888');
@@ -154,7 +169,22 @@ export default function WebChat() {
 	}, [decodedHtmlTemplate]);
 
 	return (
-		<div className="w-full h-full" style={{transform: "scale(1.2)", transformOrigin: "top left"}}>
+		<div
+			className={`
+				flex flex-col
+				${width ? `w-${width}` : ''}
+				${height ? `h-${height}` : ''}
+				${maxHeight ? `max-h-${divMaxHeight}` : ''}
+				${maxWidth ? `max-w-${divMaxWidth}` : ''}
+			`}
+			{
+				...scalingEnabled && scalingFactor ? {
+					style: {
+						transform: `scale(${scalingFactor})`
+					}
+				} : {}
+			}
+		>
 			<style>
 				{`
                 .fade-out {
@@ -163,14 +193,26 @@ export default function WebChat() {
                 }
             `}
 			</style>
-			<div className="bg-transparent">
-				{messages.map((msg, index) => (
-					<div key={index} className={`message ${msg.fullyFadedOut ? 'fade-out' : ''}`}>
-						<div
-							dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}/>
-					</div>
-				))}
-			</div>
+			<script src="https://cdn.tailwindcss.com"></script>
+			{messages.map((msg, index) => (
+				<div
+					key={index}
+					className={
+						`
+							message 
+							${msg.fullyFadedOut ? 'fade-out' : ''}
+							flex items-start
+							${width ? `w-${width}` : ''}
+							${height ? `h-${height}` : ''}
+							${maxHeight ? `max-h-${divMaxHeight}` : ''}
+							${maxWidth ? `max-w-${divMaxWidth}` : ''}
+						`
+					}
+
+					dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}>
+
+				</div>
+			))}
 		</div>
 	);
 }

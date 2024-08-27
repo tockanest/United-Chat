@@ -45,7 +45,7 @@ async fn backend_setup(app: AppHandle) {
                         "error": e.to_string()
                     }),
                 )
-                .expect("Failed to emit setup_complete event");
+                    .expect("Failed to emit setup_complete event");
                 panic!("Error: {}", e);
             });
 

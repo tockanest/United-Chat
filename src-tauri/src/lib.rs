@@ -4,7 +4,7 @@ mod misc;
 use chat::twitch::auth::{start_twitch_link, twitch_auth};
 use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::{connect_twitch_websocket, TwitchWebsocketChat};
-use misc::editor::get_app_url::{get_app_url, hide_webchat_window, open_webchat_window};
+use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
 use misc::editor::get_theme::get_theme;
 use misc::setup::{setup_complete, SetupState};
 use std::sync::Mutex;
@@ -70,7 +70,6 @@ pub fn run() {
             connect_twitch_websocket,
             get_user,
             get_theme,
-            get_app_url,
             open_webchat_window,
             hide_webchat_window
         ])

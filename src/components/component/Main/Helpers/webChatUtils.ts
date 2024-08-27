@@ -13,7 +13,7 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 	return template
 		.replaceAll("{id}", message.id)
 		.replaceAll("{user}", message.display_name)
-		.replaceAll("{formatedMessage}", message.message.substring(0, 35))
+		.replaceAll("{formatedMessage}", message.message.substring(0, 100))
 		.replaceAll("{raw_message}", message.raw_data.raw_message)
 		.replaceAll("{color}", message.user_color || "")
 		.replaceAll("{profile_picture}", "")
@@ -23,4 +23,4 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 }
 
 
-export { formatPlatformBadge, replacePlaceholders };
+export {formatPlatformBadge, replacePlaceholders};

@@ -4832,7 +4832,7 @@ checksum = "d4c87d22b6e3f4a18d4d40ef354e97c90fcb14dd91d7dc0aa9d8a1172ebf7202"
 
 [[package]]
 name = "united-chat"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "dirs",

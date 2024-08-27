@@ -29,6 +29,8 @@ import {
 	AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import {cn} from "@/lib/utils";
+import ConfigDropdown from "@/components/component/Editor/ConfigDropdown";
+import {replacePlaceholders} from "@/components/component/Main/Helpers/webChatUtils";
 
 type EditorProps = {
 	setPreviewPosition: React.Dispatch<React.SetStateAction<PreviewPosition>>,
@@ -49,8 +51,7 @@ export default function Editor(
 		previewPosition,
 		editorSize,
 		setEditorSize,
-		showPreview,
-		user
+		showPreview
 	}: EditorProps
 ) {
 
@@ -68,6 +69,35 @@ export default function Editor(
 	const [dialogMessage, setDialogMessage] = useState<string>("");
 	const [copied, setCopied] = useState(false)
 	const [webChatWindowShown, setWebChatWindowShown] = useState<boolean>(false);
+
+	const [config, setConfig] = useState<ConfigState>({
+		scaling: false,
+		scalingValue: 1,
+		fadeOut: false,
+		messageRemoveTimer: 5,
+		maxMessages: 10,
+		maxWidth: 800,
+		maxHeight: 600,
+		currentWidth: 800,
+		currentHeight: 600,
+	});
+
+
+	useEffect(() => {
+		const configString = localStorage.getItem("chatConfig");
+		const config = configString ? JSON.parse(configString) : null;
+		if (config) {
+			setConfig(config);
+		}
+	}, [])
+
+	useEffect(() => {
+		localStorage.setItem("chatConfig", JSON.stringify(config));
+	}, [config])
+
+	const handleConfigChange = (key: keyof ConfigState, value: number | boolean) => {
+		setConfig(prevConfig => ({...prevConfig, [key]: value}))
+	}
 
 	const {resizeRef, editorRef, previewRef, containerRef} = useResizeRefs();
 
@@ -87,7 +117,7 @@ export default function Editor(
 								onChange={(event) => {
 									handleQuickResize(event, setQuickResizeValue, setPendingResize);
 								}}
-								onBlur={(event) => {
+								onBlur={() => {
 									handleQuickResizeBlur(quickResizeValue, setEditorSize, setPendingResize, pendingResize);
 								}}
 								className={`w-20 ${pendingResize ? 'border-yellow-500' : ''}`}
@@ -131,7 +161,7 @@ export default function Editor(
 			}
 		};
 
-		const handleGlobalMouseUp = (e: MouseEvent) => {
+		const handleGlobalMouseUp = () => {
 			if (isResizing) {
 				handleResizeEnd(isResizing, setIsResizing, editorRef, containerRef, previewPosition, setEditorSize, setQuickResizeValue, editorSize);
 			}
@@ -146,40 +176,18 @@ export default function Editor(
 		};
 	}, [isResizing, handleResize, handleResizeEnd]);
 
-	function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
-		switch (platform) {
-			case "twitch": {
-				return "<img src='/icons/brands/twitch_glitch.svg\' alt='twitch' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>";
-			}
-			case "youtube": {
-				return "<img src='/icons/brands/youtube-color.svg' alt='youtube' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>";
-			}
-		}
-	}
-
-	function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
-		return template
-			.replaceAll("{user}", message.display_name)
-			.replaceAll("{formatedMessage}", message.message)
-			.replaceAll("{raw_message}", message.raw_data.raw_message)
-			.replaceAll("{color}", message.user_color || "")
-			.replaceAll("{profile_picture}", "")
-			.replaceAll("{platform}", formatPlatformBadge(platform))
-			.replaceAll("{\" \"}", "⠀")
-			.replaceAll("{badges}", message.user_badges?.join(" ") || "");
-	}
-
 	useEffect(() => {
 		const formattedMessages = messages.map(msg => replacePlaceholders(htmlCode, msg.message, msg.platform)).join('');
 		setCombinedCode(`
-      <html>
+      <html lang="en">
         <head>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
-            ${cssCode}
+            ${cssCode};
             .message { display: flex; flex-direction: row; margin: 0; padding: 0; }
             .chat-container { display: flex; flex-direction: column; gap: 0; }
           </style>
+          <title>UnitedChat - Iframe</title>
         </head>
         <body class="chat-container w-full">
           ${formattedMessages}
@@ -343,15 +351,43 @@ export default function Editor(
 								<Button
 									onClick={() => {
 										if (!startWebsocket) {
+											const cleanedCssCode = cssCode.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
+											const base64CssCode = btoa(cleanedCssCode); // Encode to Base64
+
 											const cleanedHtmlCode = removeComments(htmlCode); // Remove comments
 											const base64HtmlCode = btoa(cleanedHtmlCode); // Encode to Base64
-											const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&fadeOut=true&removalTime=10`;
 
-											TauriApi.GetAppUrl().then((appUrl) => {
-												const fullUrl = `http://localhost:3000/${url}`;
-												setDialogMessage(fullUrl);
-												setShowConfirmDialog(true);
-											})
+											// Get the configuration from the editor
+											const scaling = config.scaling;
+											const scalingValue = config.scalingValue;
+											const fadeOut = config.fadeOut;
+											const messageRemoveTimer = config.messageRemoveTimer;
+											const maxWidth = config.maxWidth;
+											const maxHeight = config.maxHeight;
+											const currentWidth = config.currentWidth;
+											const currentHeight = config.currentHeight;
+											const maxMessages = config.maxMessages;
+
+											// If any of the boolean values are false, ignore them
+											let configString = "";
+											if (scaling) configString += `scaling=${scalingValue}&`;
+											if (fadeOut) configString += `fadeOut=${fadeOut}&`;
+											console.log(fadeOut)
+
+											// Add the max width and height
+											configString += `maxWidth=${maxWidth}&maxHeight=${maxHeight}&`;
+											// Add the current width and height
+											configString += `currentWidth=${currentWidth}&currentHeight=${currentHeight}`;
+											// Add the max messages
+											configString += `&maxMessages=${maxMessages}&removalTimer=${messageRemoveTimer}`;
+
+											const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&css=${base64CssCode}&${configString}`;
+
+											const port = process.env.NODE_ENV === "production" ? "9889" : "3000";
+											const fullUrl = `http://localhost:${port}/${url}`;
+											setDialogMessage(fullUrl);
+											setShowConfirmDialog(true);
+
 										}
 
 										if (webChatWindowShown) {
@@ -377,6 +413,7 @@ export default function Editor(
 										)
 									}
 								</Button>
+								<ConfigDropdown onConfigChange={handleConfigChange} config={config}/>
 							</div>
 						</div>
 						<TabsContent value="html"
@@ -386,7 +423,7 @@ export default function Editor(
 								extensions={[html()]}
 								onChange={(value) => setHtmlCode(value)}
 								theme={dracula}
-								className={`flex-grow h-full `}
+								className={`flex-grow h-full w-fit max-w-full`}
 								height="100%"
 							/>
 						</TabsContent>
