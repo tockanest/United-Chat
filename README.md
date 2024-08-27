@@ -82,7 +82,7 @@ npm run tauri:build
 npm run tauri:dev
 ```
 
-Happy coding, and may your chats be forever united! 🎉
+Happy coding, and may your chats be forever united! 🎉 (May god help us all again)
 
 ---
 
