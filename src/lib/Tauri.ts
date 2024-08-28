@@ -65,7 +65,25 @@ export default class TauriApi {
 	}
 
 	public static async GetEditorTheme(theme: string = "default") {
-		return await this.command<string>("get_theme", {theme: theme});
+		const {
+			name,
+			html_code,
+			css_code
+		} = await this.command<{ name: string, html_code: string, css_code: string }>("get_theme", {theme: theme});
+
+		return {
+			name,
+			html_code,
+			css_code
+		}
+	}
+
+	public static async GetAvailableThemes() {
+		return await this.command<AvailableThemes>("get_themes", {});
+	}
+
+	public static async SaveTheme(themeName: string, htmlCode: string, cssCode: string) {
+		return await this.command<boolean>("save_theme", {themeName, htmlCode, cssCode});
 	}
 
 	public static async ListenEvent(event: string, callback: (event: any) => void) {
@@ -93,4 +111,4 @@ export default class TauriApi {
 	}
 }
 
-
+type AvailableThemes = [string, string, string][];

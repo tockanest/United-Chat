@@ -1,3 +1,6 @@
+import TauriApi from "@/lib/Tauri";
+import React from "react";
+
 function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
 	switch (platform) {
 		case "twitch": {
@@ -22,5 +25,87 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 		.replaceAll("{badges}", message.user_badges?.join(" ") || "");
 }
 
+function handleConfigChange(key: keyof ConfigState, value: number | boolean, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {
+	setConfig(prevConfig => ({...prevConfig, [key]: value}))
+}
 
-export {formatPlatformBadge, replacePlaceholders};
+function handleCopy(
+	dialogMessage: string,
+	setCopied: React.Dispatch<React.SetStateAction<boolean>>
+) {
+	navigator.clipboard.writeText(dialogMessage)
+	setCopied(true)
+	setTimeout(() => setCopied(false), 2000)
+}
+
+function removeComments(html: string): string {
+	return html.replace(/<!--[\s\S]*?-->/g, '');
+}
+
+
+function handleWebChatWindow(
+	htmlCode: string,
+	cssCode: string,
+	config: ConfigState,
+	setDialogMessage: React.Dispatch<React.SetStateAction<string>>,
+	setShowConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>,
+	setStartWebsocket: React.Dispatch<React.SetStateAction<boolean>>,
+	webChatWindowShown: boolean,
+	setWebChatWindowShown: React.Dispatch<React.SetStateAction<boolean>>,
+	startWebsocket: boolean
+) {
+	if (!startWebsocket) {
+		const cleanedCssCode = cssCode.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
+		const base64CssCode = btoa(cleanedCssCode); // Encode to Base64
+
+		const cleanedHtmlCode = removeComments(htmlCode); // Remove comments
+		const base64HtmlCode = btoa(cleanedHtmlCode); // Encode to Base64
+
+		// Get the configuration from the editor
+		const scaling = config.scaling;
+		const scalingValue = config.scalingValue;
+		const fadeOut = config.fadeOut;
+		const messageRemoveTimer = config.messageRemoveTimer;
+		const maxWidth = config.maxWidth;
+		const maxHeight = config.maxHeight;
+		const currentWidth = config.currentWidth;
+		const currentHeight = config.currentHeight;
+		const maxMessages = config.maxMessages;
+
+		// If any of the boolean values are false, ignore them
+		let configString = "";
+		if (scaling) configString += `scaling=${scalingValue}&`;
+		if (fadeOut) configString += `fadeOut=${fadeOut}&`;
+
+		// Add the max width and height
+		configString += `maxWidth=${maxWidth}&maxHeight=${maxHeight}&`;
+		// Add the current width and height
+		configString += `currentWidth=${currentWidth}&currentHeight=${currentHeight}`;
+		// Add the max messages
+		configString += `&maxMessages=${maxMessages}&removalTimer=${messageRemoveTimer}`;
+
+		const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&css=${base64CssCode}&${configString}`;
+
+		const port = process.env.NODE_ENV === "production" ? "9889" : "3000";
+		const fullUrl = `http://localhost:${port}/${url}`;
+		setDialogMessage(fullUrl);
+		setShowConfirmDialog(true);
+
+	}
+
+	if (webChatWindowShown) {
+		TauriApi.CloseWebChatWindow();
+		setWebChatWindowShown(false);
+	}
+
+	setStartWebsocket(!startWebsocket);
+}
+
+export {
+	formatPlatformBadge,
+	replacePlaceholders,
+	handleConfigChange,
+	handleCopy,
+	removeComments,
+	handleWebChatWindow,
+};

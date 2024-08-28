@@ -1,22 +1,27 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use keyring::Entry;
 use serde_json::json;
+use std::error::Error;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::task;
+use crate::misc::editor::get_theme::get_themes;
 
 pub(crate) struct SetupState {
     pub(crate) frontend_task: bool,
     pub(crate) backend_task: bool,
 }
 
+
+
 async fn backend_setup(app: AppHandle) {
+    let app_clone = app.clone();
+
     match Entry::new("united-chat", "twitch-auth") {
         Ok(entry) => {
             let auth = entry.get_password().unwrap();
             let parsed: ImplicitGrantFlow = serde_json::from_str(&auth).unwrap();
 
-            let app_clone = app.clone();
             // Manage state directly after parsing
             app_clone.manage(ImplicitGrantFlow {
                 access_token: parsed.access_token,
@@ -68,6 +73,14 @@ async fn backend_setup(app: AppHandle) {
             panic!("Twitch auth not found");
         }
     };
+
+    let themes = get_themes().await.unwrap();
+
+    // Manage the themes state
+    app_clone.manage(crate::misc::editor::save_theme::ThemeState {
+        themes,
+    });
+
 }
 
 #[tauri::command]

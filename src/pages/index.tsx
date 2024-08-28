@@ -23,6 +23,7 @@ export default function UnitedChat() {
 	const [showPreview, setShowPreview] = useState<boolean>(true)
 
 	const [user, setUser] = useState<UserInformation | null>(null)
+	const [showSaveDialog, setShowSaveDialog] = useState<boolean>(false)
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -30,8 +31,7 @@ export default function UnitedChat() {
 				case "s":
 					if (e.metaKey || e.ctrlKey) {
 						e.preventDefault(); // Prevent the default save (like Cmd+S / Ctrl+S)
-						console.log("Save");
-						// Your save function here
+						setShowSaveDialog(true);
 					}
 					break;
 				case "p":
@@ -78,6 +78,8 @@ export default function UnitedChat() {
 						setEditorSize={setEditorSize}
 						showPreview={showPreview}
 						user={user}
+						showSaveDialog={showSaveDialog}
+						setShowSaveDialog={setShowSaveDialog}
 					/>
 				) ||
 				currentPage === "settings" && (

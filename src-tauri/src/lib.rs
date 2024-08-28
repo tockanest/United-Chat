@@ -1,6 +1,8 @@
 mod chat;
 mod misc;
 
+use crate::misc::editor::get_theme::get_themes;
+use crate::misc::editor::save_theme::save_theme;
 use chat::twitch::auth::{start_twitch_link, twitch_auth};
 use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::{connect_twitch_websocket, TwitchWebsocketChat};
@@ -40,18 +42,6 @@ pub fn run() {
             app.deep_link().register("unitedchat").unwrap();
 
             let url = format!("http://localhost:{}", 9889).parse().unwrap();
-            // {
-            // 				"label": "webchat",
-            // 				"title": "United Chat - WebChat",
-            // 				"width": 800,
-            // 				"height": 600,
-            // 				"resizable": true,
-            // 				"visible": false,
-            // 				"url": "/webchat",
-            // 				"center": true,
-            // 				"closable": false,
-            // 				"transparent": true
-            // 			}
 
             WebviewWindowBuilder::new(app, "webchat".to_string(), WebviewUrl::External(url))
                 .visible(false)
@@ -70,6 +60,8 @@ pub fn run() {
             connect_twitch_websocket,
             get_user,
             get_theme,
+            get_themes,
+            save_theme,
             open_webchat_window,
             hide_webchat_window
         ])

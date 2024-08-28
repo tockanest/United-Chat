@@ -5,8 +5,7 @@ function togglePreview(
 	showPreview: boolean,
 ) {
 	setShowPreview(value)
-	setEditorSize(showPreview ? 100 : 50)
-
+	setEditorSize(value ? 85 : 100)
 }
 
 function getSeparatorStyle(
