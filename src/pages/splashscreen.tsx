@@ -65,24 +65,40 @@ export default function Component() {
 		setShowStreamerUrlDialog(true)
 	}
 
-	const validateUrl = (url: string) => {
+	function validateUrl(url: string) {
 		const twitchUrlRegex = /^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]+)$/
 		return twitchUrlRegex.test(url)
+	}
+
+	function getChannelName(url: string) {
+		const match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]+)$/)
+		if (match) {
+			return match[1]
+		}
+		return ''
 	}
 
 	const handleStreamerUrlSubmit = () => {
 		if (validateUrl(streamerUrl)) {
 			setUrlError('')
 			setShowStreamerUrlDialog(false)
-			TauriApi.SkipLinking().then((value) => {
-				if (value) {
-					setAlreadyLinked(true)
-					localStorage.setItem('twitch_linked', 'true')
+
+			setAlreadyLinked(true)
+			// localStorage.setItem('twitch_linked', 'true')
+			const channelName = getChannelName(streamerUrl)
+
+			TauriApi.SkipLinking(
+				streamerUrl,
+				channelName
+			).then((result) => {
+				if (result) {
 					TauriApi.FinishFrontendSetup().then(() => {
 						console.log('Frontend setup complete')
 						// Here you would typically send the streamerUrl to your backend
 						console.log('Streamer URL:', streamerUrl)
 					})
+				} else {
+					console.error('Failed to skip linking')
 				}
 			})
 		} else {

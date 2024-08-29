@@ -7,11 +7,7 @@ export const metadata = {
 	description: 'A code editor with Tailwind CSS support',
 }
 
-export default function RootLayout({
-	                                   children,
-                                   }: {
-	children: React.ReactNode
-}) {
+export default function RootLayout({children}: { children: React.ReactNode }) {
 	return (
 		<html lang="en">
 		<body className={inter.variable}>{children}</body>

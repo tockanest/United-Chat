@@ -12,6 +12,7 @@ import {Button} from "@/components/ui/button";
 import {EyeIcon, EyeOffIcon, LogOut, Settings, User} from "lucide-react";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import React from "react";
+import TauriApi from "@/lib/Tauri";
 
 type HeaderProps = {
 	setPage: React.Dispatch<React.SetStateAction<string>>,
@@ -57,22 +58,25 @@ export default function Header(
 					{showPreview ? 'Hide Preview' : 'Show Preview'}
 				</Button>
 				{
-					user && (
+
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="ghost" className="relative h-10 w-10 rounded-full">
 									<Avatar className="h-10 w-10">
-										<AvatarImage src={user.internal_info.profile_image_url} alt={user.login}/>
-										<AvatarFallback>{user.login.charAt(0)}</AvatarFallback>
+										<AvatarImage src={user?.internal_info.profile_image_url || "Anonymous"} alt={user?.login || "Anonymous"}/>
+										<AvatarFallback>{user?.login.charAt(0) || "A"}</AvatarFallback>
 									</Avatar>
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent className="w-56" align="end" forceMount>
 								<DropdownMenuLabel className="font-normal">
 									<div className="flex flex-col space-y-1">
-										<p className="text-sm font-medium leading-none">{user.login}</p>
+										<p className="text-sm font-medium leading-none">{user?.login || "Anonymous"}</p>
 										<p className="text-xs leading-none text-muted-foreground">
-											{user.internal_info.broadcaster_type.charAt(0).toUpperCase() + user.internal_info.broadcaster_type.slice(1)}
+											{
+												//@ts-ignore
+												(user?.internal_info.broadcaster_type.charAt(0).toUpperCase() + user?.internal_info.broadcaster_type.slice(1)) || "Anonymous"
+											}
 										</p>
 									</div>
 								</DropdownMenuLabel>
@@ -92,14 +96,17 @@ export default function Header(
 									</DropdownMenuItem>
 								</DropdownMenuGroup>
 								<DropdownMenuSeparator className={"bg-gray-600"}/>
-								<DropdownMenuItem className="text-red-600 cursor-pointer">
+								<DropdownMenuItem className="text-red-600 cursor-pointer" onClick={() => {
+									localStorage.setItem("twitch_linked", "false");
+									TauriApi.Logout();
+								}}>
 									<LogOut className="mr-2 h-4 w-4"/>
 									<span>Log out</span>
 									<DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-					)
+
 				}
 			</div>
 		</header>

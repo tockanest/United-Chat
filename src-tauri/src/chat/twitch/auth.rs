@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct ImplicitGrantFlow {
@@ -22,6 +22,12 @@ pub(crate) struct UserInformation {
     pub(crate) user_id: String,
     pub(crate) expires_in: String,
     pub(crate) internal_info: InternalUserInformation,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) struct UserSkippedInformation {
+    pub(crate) full_channel_url: String,
+    pub(crate) username: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -261,4 +267,66 @@ pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
     } else {
         println!("Not opened via deep link");
     }
+}
+
+#[tauri::command]
+pub(crate) async fn twitch_deauth(app: AppHandle) -> bool {
+    let entry = Entry::new("united-chat", "twitch-auth")
+        .unwrap_or_else(|e| panic!("Error: {}", e));
+
+    entry.delete_credential().unwrap();
+
+    let path = dirs::config_dir().unwrap().join("United Chat");
+    if !path.exists() {
+        std::fs::create_dir_all(&path).expect("Failed to create directory");
+    }
+
+    let user_file = path.join("twitch-auth.json");
+    std::fs::remove_file(user_file).expect("Failed to remove file");
+
+    let main_window = app.get_webview_window("main").unwrap();
+    main_window.close().unwrap();
+
+    WebviewWindowBuilder::from_config(&app, &app.config().app.windows.get(0).unwrap().clone())
+        .unwrap()
+        .build()
+        .unwrap();
+
+    true
+}
+
+#[tauri::command]
+pub(crate) async fn skip_twitch_auth(full_url: String, username: String) -> bool {
+    println!("Skipping auth");
+    let user = UserSkippedInformation {
+        full_channel_url: full_url,
+        username,
+    };
+
+    let path = dirs::config_dir().unwrap().join("United Chat");
+    if !path.exists() {
+        std::fs::create_dir_all(&path).expect("Failed to create directory");
+    }
+
+    let user_file = path.join("twitch-auth.json");
+
+    if !user_file.exists() {
+        std::fs::File::create(user_file.clone()).expect("Failed to create file");
+    }
+
+    let mut file = OpenOptions::new()
+        .write(true)
+        .open(user_file)
+        .expect("Failed to open file");
+    file.write_all(serde_json::to_string(&user).unwrap().as_bytes())
+        .expect("Failed to write to file");
+
+    let entry = Entry::new("united-chat", "twitch-noauth")
+        .unwrap_or_else(|e| panic!("Error: {}", e));
+
+    entry
+        .set_password(&serde_json::to_string(&user).unwrap())
+        .unwrap_or_else(|e| panic!("Error: {}", e));
+
+    true
 }

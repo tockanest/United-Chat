@@ -1,25 +1,26 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
+use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
+use crate::misc::editor::get_theme::get_themes;
 use keyring::Entry;
 use serde_json::json;
-use std::error::Error;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
-use crate::misc::editor::get_theme::get_themes;
 
 pub(crate) struct SetupState {
     pub(crate) frontend_task: bool,
     pub(crate) backend_task: bool,
 }
 
-
+fn get_password(service: &str, username: &str) -> Result<String, keyring::Error> {
+    let entry = Entry::new(service, username)?;
+    entry.get_password()
+}
 
 async fn backend_setup(app: AppHandle) {
     let app_clone = app.clone();
 
-    match Entry::new("united-chat", "twitch-auth") {
-        Ok(entry) => {
-            let auth = entry.get_password().unwrap();
+    match get_password("united-chat", "twitch-auth") {
+        Ok(auth) => {
             let parsed: ImplicitGrantFlow = serde_json::from_str(&auth).unwrap();
 
             // Manage state directly after parsing
@@ -63,14 +64,35 @@ async fn backend_setup(app: AppHandle) {
                     app.clone(),
                     app.state::<Mutex<SetupState>>(),
                     "backend".to_string(),
-                    None,
                 ))
             });
         }
         Err(_) => {
-            app.emit_to("splashscreen", "splashscreen::twitch-reauth", true)
-                .unwrap();
-            panic!("Twitch auth not found");
+            match get_password("united-chat", "twitch-noauth") {
+                Ok(auth) => {
+                    let parsed: UserSkippedInformation = serde_json::from_str(&auth).unwrap();
+
+                    // Manage state directly after parsing
+                    app_clone.manage(UserSkippedInformation {
+                        full_channel_url: parsed.full_channel_url,
+                        username: parsed.username,
+                    });
+
+                    task::spawn_blocking(move || {
+                        let runtime = tokio::runtime::Runtime::new().unwrap();
+                        runtime.block_on(setup_complete(
+                            app.clone(),
+                            app.state::<Mutex<SetupState>>(),
+                            "backend".to_string(),
+                        ))
+                    });
+                }
+                Err(_) => {
+                    // There's no authentication set, we remove all data set on browser storage, mainly the keys: twitch_linked, setup_skipped
+                    app.emit_to("splashscreen", "twitch_auth", json!({"success": false, "error": "No authentication found"})).unwrap();
+                    return;
+                }
+            }
         }
     };
 
@@ -88,32 +110,13 @@ pub(crate) async fn setup_complete(
     app: AppHandle,
     state: State<'_, Mutex<SetupState>>,
     task: String,
-    skip: Option<bool>,
 ) -> Result<(), ()> {
     let mut state_lock = state.lock().unwrap();
 
     match task.as_str() {
         "frontend" => {
             state_lock.frontend_task = true;
-
-            if Some(true) == skip {
-                state_lock.backend_task = true;
-
-                // manage TwitchAuth struct
-                let twitch_auth = ImplicitGrantFlow {
-                    access_token: "".to_string(),
-                    scope: "".to_string(),
-                    state: "".to_string(),
-                    token_type: "".to_string(),
-                    error: None,
-                    error_description: None,
-                    skipped: Some(true),
-                };
-
-                app.manage(twitch_auth);
-            } else {
-                task::spawn(backend_setup(app.clone()));
-            }
+            task::spawn(backend_setup(app.clone()));
         }
         "backend" => {
             state_lock.backend_task = true;
@@ -125,9 +128,12 @@ pub(crate) async fn setup_complete(
 
     if state_lock.frontend_task && state_lock.backend_task {
         let splash_window = app.get_webview_window("splashscreen").unwrap();
-        let main_window = app.get_webview_window("main").unwrap();
         splash_window.close().unwrap();
-        main_window.show().unwrap();
+
+        WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
+            .title("United Chat")
+            .build()
+            .unwrap();
     }
 
     drop(state_lock);

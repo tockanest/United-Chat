@@ -141,6 +141,8 @@ export default function Editor(
 				clearInterval(messageInterval);
 				clearInterval(cleanupInterval);
 			}
+		} else {
+			TauriApi.ConnectTwitchWebsocket();
 		}
 
 	}, []);

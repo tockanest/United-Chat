@@ -1,4 +1,4 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
+use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
 use crate::chat::twitch::helpers::auth_helpers::{
     construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags,
 };
@@ -38,6 +38,11 @@ pub(crate) struct TwitchWebsocketChat {
     pub(crate) ws_stream_initialized: Arc<Mutex<bool>>,
 }
 
+enum UserInformationState {
+    Skipped(Arc<UserSkippedInformation>),
+    Regular(Arc<UserInformation>),
+}
+
 #[tauri::command]
 pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     let websocket_connection =
@@ -52,9 +57,23 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
         *ws_initialized = true;
     }
 
+    let state = app.state::<ImplicitGrantFlow>();
+
+    let user_information = match state.skipped {
+        Some(true) => {
+            let skipped_state = Arc::new((*app.state::<UserSkippedInformation>()).clone());
+            UserInformationState::Skipped(skipped_state)
+        }
+        _ => {
+            let regular_state = Arc::new((*app.state::<UserInformation>()).clone());
+            UserInformationState::Regular(regular_state)
+        }
+    };
+
+
     let ws_server = Arc::new(WebSocketServer::new());
     let ws_server_clone = Arc::clone(&ws_server);
-    println!("Starting WebSocket server...");
+
     tokio::spawn(async move {
         if let Err(e) = ws_server_clone.run("localhost:9888").await {
             eprintln!("WebSocket server error: {}", e);
@@ -62,7 +81,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
             println!("WebSocket server started successfully");
         }
     });
-    println!("WebSocket server spawn initiated.");
+
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
@@ -80,7 +99,19 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                 .send("CAP REQ :twitch.tv/tags".into())
                 .await
                 .unwrap();
-            ws_stream.send("JOIN #nixyyi".into()).await.unwrap();
+
+            match &user_information {
+                UserInformationState::Skipped(user) => {
+                    let username = user.username.clone();
+                    ws_stream.send(format!("JOIN #{}", username).into()).await.unwrap();
+                }
+                UserInformationState::Regular(user_info) => {
+                    ws_stream
+                        .send(format!("JOIN #{}", user_info.login).into())
+                        .await
+                        .unwrap();
+                }
+            }
         } else if msg.to_string().contains("PRIVMSG") {
             let msg = msg.to_string();
             if let Some((tags, username, content)) = parse_twitch_message(&*msg) {
@@ -142,13 +173,9 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                     }
                 }
 
-                let state = app.state::<ImplicitGrantFlow>();
-
-                // Check if the setup was skipped by checking the "skipped" flag on the state: skipped: Option<bool>
-                if let Some(skipped) = state.skipped {
-                    if !skipped {
-                        let user_information = app.state::<UserInformation>();
-                        let badges = get_chat_badges(state.clone(), user_information.clone()).await;
+                match &user_information {
+                    UserInformationState::Regular(user_info) => {
+                        let badges = get_chat_badges(state.clone(), user_info).await;
 
                         let mut user_badges: Vec<String> = Vec::new();
                         for badge_set in badges.data {
@@ -213,6 +240,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
                             .await;
                         app.emit_to("main", "chat-data::twitch", response).unwrap();
                     }
+                    UserInformationState::Skipped(user) => {}
                 }
             }
         }

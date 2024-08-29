@@ -10,8 +10,12 @@ export default class TauriApi {
 		})
 	}
 
-	public static async SkipLinking() {
-		return await this.command<boolean>("skip_twitch_auth", {});
+	public static async Logout() {
+		return await this.command<void>("twitch_deauth", {});
+	}
+
+	public static async SkipLinking(fullUrl: string, username: string) {
+		return await this.command<boolean>("skip_twitch_auth", {fullUrl, username});
 	}
 
 	public static async FinishFrontendSetup() {

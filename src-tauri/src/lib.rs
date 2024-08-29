@@ -1,20 +1,54 @@
 mod chat;
 mod misc;
 
+use crate::chat::twitch::auth::twitch_deauth;
 use crate::misc::editor::get_theme::get_themes;
 use crate::misc::editor::save_theme::save_theme;
-use chat::twitch::auth::{start_twitch_link, twitch_auth};
+use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_auth};
 use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::{connect_twitch_websocket, TwitchWebsocketChat};
 use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
 use misc::editor::get_theme::get_theme;
 use misc::setup::{setup_complete, SetupState};
+use std::backtrace;
+use std::io::Write;
 use std::sync::Mutex;
 use tauri::{Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    std::panic::set_hook(Box::new(|info| {
+        let path = dirs::config_dir().unwrap().join("United Chat").join("logs");
+
+        if !path.exists() {
+            std::fs::create_dir_all(&path).expect("Failed to create directory");
+        }
+
+        // Timestamp: dd-mm-yyyy-hh-mm
+        let timestamp = chrono::Local::now().format("%d-%m-%Y-%H-%M");
+        let file_name = format!("error-{}.log", timestamp);
+        let file_path = path.join(file_name);
+
+        std::fs::File::create(file_path.clone()).expect("Failed to create file");
+
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(file_path)
+            .expect("Failed to open file");
+
+        let error = format!(
+            "Error: {}\nBacktrace: {:?}\n",
+            info,
+            backtrace::Backtrace::capture()
+        );
+
+        file.write_all(error.clone().as_bytes()).expect("Failed to write to file");
+
+        eprint!("{}", error)
+    }));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_localhost::Builder::new(9889).build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -57,6 +91,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             setup_complete,
             start_twitch_link,
+            skip_twitch_auth,
+            twitch_deauth,
             connect_twitch_websocket,
             get_user,
             get_theme,

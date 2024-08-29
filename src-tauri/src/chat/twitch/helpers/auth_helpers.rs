@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -62,7 +63,7 @@ pub(crate) struct TwitchBadgesResponse {
 
 pub(crate) async fn get_chat_badges(
     auth_state: State<'_, ImplicitGrantFlow>,
-    user_state: State<'_, UserInformation>,
+    user_state: &Arc<UserInformation>,
 ) -> TwitchBadgesResponse {
     let client = reqwest::Client::new();
 
