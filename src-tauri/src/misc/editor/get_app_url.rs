@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, Url};
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 pub(crate) fn open_webchat_window(url: String, app: AppHandle) {

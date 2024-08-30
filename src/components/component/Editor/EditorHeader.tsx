@@ -13,7 +13,7 @@ import TauriApi from "@/lib/Tauri"
 import {handleConfigChange, handleWebChatWindow} from "@/components/component/Main/Helpers/webChatUtils"
 import Alerts from "@/components/component/Editor/Alerts";
 
-type EditorHeaderProps = {
+export type EditorHeaderProps = {
 	htmlCode: string;
 	setHtmlCode: React.Dispatch<React.SetStateAction<string>>;
 	cssCode: string;
@@ -24,6 +24,8 @@ type EditorHeaderProps = {
 	setShowSaveDialog: React.Dispatch<React.SetStateAction<boolean>>;
 	startWebsocket: boolean;
 	setStartWebsocket: React.Dispatch<React.SetStateAction<boolean>>;
+	triggerReloadAlert: boolean;
+	setTriggerReloadAlert: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function EditorHeader(
@@ -37,7 +39,9 @@ export default function EditorHeader(
 		showSaveDialog,
 		setShowSaveDialog,
 		startWebsocket,
-		setStartWebsocket
+		setStartWebsocket,
+		triggerReloadAlert,
+		setTriggerReloadAlert
 	}: EditorHeaderProps
 ) {
 	const [editorSelected, setEditorSelected] = useState<string>('html')
@@ -76,6 +80,8 @@ export default function EditorHeader(
 				htmlCode={htmlCode}
 				cssCode={cssCode}
 				setNewTheme={setNewTheme}
+				triggerReloadAlert={triggerReloadAlert}
+				setTriggerReloadAlert={setTriggerReloadAlert}
 			/>
 			<Tabs defaultValue="html" className="flex-grow flex flex-col">
 				<div

@@ -70,12 +70,23 @@ async fn backend_setup(app: AppHandle) {
         Err(_) => {
             match get_password("united-chat", "twitch-noauth") {
                 Ok(auth) => {
+                    println!("No authentication found, skipping setup");
                     let parsed: UserSkippedInformation = serde_json::from_str(&auth).unwrap();
 
                     // Manage state directly after parsing
                     app_clone.manage(UserSkippedInformation {
                         full_channel_url: parsed.full_channel_url,
                         username: parsed.username,
+                    });
+
+                    app_clone.manage(ImplicitGrantFlow {
+                        access_token: "".to_string(),
+                        scope: "".to_string(),
+                        state: "".to_string(),
+                        token_type: "".to_string(),
+                        error: Option::from("".to_string()),
+                        error_description: Option::from("".to_string()),
+                        skipped: Option::from(true),
                     });
 
                     task::spawn_blocking(move || {
@@ -102,7 +113,6 @@ async fn backend_setup(app: AppHandle) {
     app_clone.manage(crate::misc::editor::save_theme::ThemeState {
         themes,
     });
-
 }
 
 #[tauri::command]
@@ -133,6 +143,8 @@ pub(crate) async fn setup_complete(
         WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
             .title("United Chat")
             .build()
+            .unwrap()
+            .maximize()
             .unwrap();
     }
 

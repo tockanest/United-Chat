@@ -1,2 +1,2 @@
 pub(crate) mod auth_helpers;
-pub(crate) mod ws_server;
+pub(crate) mod message_processor;

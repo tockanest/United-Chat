@@ -19,9 +19,9 @@ declare global {
 		timestamp: number
 		display_name: string,
 		user_color: string | null,
-		user_badges: string[] | [] | null,
+		user_badges: string[] | [];
 		message: string,
-		emotes: string[] | [] | null,
+		emotes: string[] | [];
 		raw_data: {
 			raw_message: string,
 			raw_emotes: string,
@@ -35,9 +35,9 @@ declare global {
 		timestamp: number;
 		display_name: string;
 		user_color: string | null;
-		user_badges: string[] | [] | null;
+		user_badges: string[] | [];
 		message: string;
-		emotes: string[] | [] | null;
+		emotes: string[] | [];
 		raw_data: {
 			raw_message: string;
 			raw_emotes: string;
@@ -73,6 +73,9 @@ declare global {
 		currentWidth: number
 		currentHeight: number
 	}
+
+	type AvailableThemes = [string, string, string][];
+
 }
 
 export {}

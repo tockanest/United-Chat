@@ -12,7 +12,14 @@ function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["pl
 	}
 }
 
+function returnAllBadges(badges: string[]) {
+	return badges.map((badge, index) => {
+		return `<img src='${badge}' alt='badge' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>`
+	}).join(" ");
+}
+
 function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
+
 	return template
 		.replaceAll("{id}", message.id)
 		.replaceAll("{user}", message.display_name)
@@ -22,7 +29,10 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 		.replaceAll("{profile_picture}", "")
 		.replaceAll("{platform}", formatPlatformBadge(platform))
 		.replaceAll("{\" \"}", "⠀")
-		.replaceAll("{badges}", message.user_badges?.join(" ") || "");
+		.replaceAll("{badge_1}", message.user_badges[0] || "")
+		.replaceAll("{badge_2}", message.user_badges[1] || "")
+		.replaceAll("{badge_3}", message.user_badges[2] || "")
+		.replaceAll("{badges}", returnAllBadges(message.user_badges))
 }
 
 function handleConfigChange(key: keyof ConfigState, value: number | boolean, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {
@@ -91,6 +101,8 @@ function handleWebChatWindow(
 		setDialogMessage(fullUrl);
 		setShowConfirmDialog(true);
 
+	} else {
+		TauriApi.DisconnectTwitchWebsocket();
 	}
 
 	if (webChatWindowShown) {

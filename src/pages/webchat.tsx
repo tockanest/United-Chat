@@ -155,7 +155,7 @@ export default function WebChat() {
 					...data.data
 				}
 			};
-
+			console.log("New message")
 			setMessages(prevMessages => [...prevMessages, newMessage as Message]);
 		};
 

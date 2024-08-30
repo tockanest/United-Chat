@@ -29,9 +29,7 @@ export default function Component() {
 		const isTwitchLinked = localStorage.getItem('twitch_linked') === 'true'
 		if (isTwitchLinked) {
 			setAlreadyLinked(true)
-			TauriApi.FinishFrontendSetup().then(() => {
-				console.log('Frontend setup complete')
-			})
+			TauriApi.FinishFrontendSetup()
 		}
 	}, [])
 
@@ -49,9 +47,7 @@ export default function Component() {
 			if (typedEvent) {
 				setAlreadyLinked(true)
 				localStorage.setItem('twitch_linked', 'true')
-				TauriApi.FinishFrontendSetup().then(() => {
-					console.log('Frontend setup complete')
-				})
+				TauriApi.FinishFrontendSetup()
 			}
 		})
 	}
@@ -84,7 +80,7 @@ export default function Component() {
 			setShowStreamerUrlDialog(false)
 
 			setAlreadyLinked(true)
-			// localStorage.setItem('twitch_linked', 'true')
+			localStorage.setItem('twitch_linked', 'true')
 			const channelName = getChannelName(streamerUrl)
 
 			TauriApi.SkipLinking(
@@ -92,11 +88,7 @@ export default function Component() {
 				channelName
 			).then((result) => {
 				if (result) {
-					TauriApi.FinishFrontendSetup().then(() => {
-						console.log('Frontend setup complete')
-						// Here you would typically send the streamerUrl to your backend
-						console.log('Streamer URL:', streamerUrl)
-					})
+					TauriApi.FinishFrontendSetup()
 				} else {
 					console.error('Failed to skip linking')
 				}

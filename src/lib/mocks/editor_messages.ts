@@ -97,12 +97,9 @@ function userBadges() {
 		"https://static-cdn.jtvnw.net/badges/v1/ed917c9a-1a45-4340-9c64-ca8be4348c51/3"
 	];
 
-	const numBadges = Math.floor(Math.random() * badges.length);
-	const randomBadges = [];
-	for (let i = 0; i < numBadges; i++) {
-		randomBadges.push(badges[i]);
-	}
-	return randomBadges;
+	// Select maximum of 3 badges
+	const maxBadges = 3;
+	return badges.slice(0, Math.min(maxBadges, badges.length));
 }
 
 function randomMessage() {
@@ -122,6 +119,8 @@ function randomColorHex() {
 }
 
 export default function randomMessageObject(): Message {
+	const badges = userBadges();
+	console.log(badges);
 	return {
 		platform: randomPlatform(),
 		message: {
@@ -129,7 +128,7 @@ export default function randomMessageObject(): Message {
 			timestamp: Date.now(),
 			display_name: randomUsername(),
 			user_color: randomColorHex(),
-			user_badges: userBadges(),
+			user_badges: badges,
 			message: randomMessage(),
 			emotes: [],
 			raw_data: {

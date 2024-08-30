@@ -139,7 +139,7 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
                         html_code,
                         css_code,
                     })
-                },
+                }
                 None => Err("Theme not found".into())
             }
         }

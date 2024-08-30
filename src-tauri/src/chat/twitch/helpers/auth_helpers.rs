@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tauri::State;
 
 pub(crate) fn parse_twitch_message(message: &str) -> Option<(String, String, String)> {

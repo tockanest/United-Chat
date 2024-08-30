@@ -20,9 +20,14 @@ type EditorProps = {
 	showPreview: boolean,
 	user: UserInformation | null,
 	showSaveDialog: boolean,
-	setShowSaveDialog: React.Dispatch<React.SetStateAction<boolean>>
+	setShowSaveDialog: React.Dispatch<React.SetStateAction<boolean>>,
+	htmlCode: string,
+	cssCode: string,
+	setHtmlCode: React.Dispatch<React.SetStateAction<string>>,
+	setCssCode: React.Dispatch<React.SetStateAction<string>>,
+	triggerReloadAlert: boolean;
+	setTriggerReloadAlert: React.Dispatch<React.SetStateAction<boolean>>;
 }
-
 
 export default function Editor(
 	{
@@ -33,6 +38,12 @@ export default function Editor(
 		showPreview,
 		showSaveDialog,
 		setShowSaveDialog,
+		htmlCode,
+		cssCode,
+		setHtmlCode,
+		setCssCode,
+		triggerReloadAlert,
+		setTriggerReloadAlert
 	}: EditorProps
 ) {
 
@@ -40,8 +51,7 @@ export default function Editor(
 	const [quickResizeValue, setQuickResizeValue] = useState<string>("15");
 	const [pendingResize, setPendingResize] = useState<boolean>(false);
 
-	const [htmlCode, setHtmlCode] = useState<string>("");
-	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
+
 	const [combinedCode, setCombinedCode] = useState<string>("");
 	const [messages, setMessages] = useState<PlatformMessage<"twitch" | "youtube">[]>([]);
 
@@ -122,7 +132,9 @@ export default function Editor(
 			setHtmlCode(theme.html_code);
 			setCssCode(theme.css_code);
 		});
+	}, [])
 
+	useEffect(() => {
 		if (!startWebsocket) {
 			const messageInterval = setInterval(() => {
 				const newMessage = randomMessageObject();
@@ -145,7 +157,7 @@ export default function Editor(
 			TauriApi.ConnectTwitchWebsocket();
 		}
 
-	}, []);
+	}, [startWebsocket]);
 
 	return (
 		<main className="flex-grow flex overflow-hidden">
@@ -192,6 +204,8 @@ export default function Editor(
 						setShowSaveDialog={setShowSaveDialog}
 						startWebsocket={startWebsocket}
 						setStartWebsocket={setStartWebsocket}
+						triggerReloadAlert={triggerReloadAlert}
+						setTriggerReloadAlert={setTriggerReloadAlert}
 					/>
 				</div>
 				{(previewPosition === 'right' || previewPosition === 'bottom') && showPreview && (

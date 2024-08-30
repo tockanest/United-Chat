@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react'
 import Tauri from "@/lib/Tauri";
+import TauriApi from "@/lib/Tauri";
 import Header from "@/components/component/Main/Header";
 import {togglePreview} from "@/components/component/Main/Helpers/MainFrame";
 import Editor from "@/components/component/Main/Editor";
@@ -7,6 +8,8 @@ import UnitedChatSettings from "@/pages/Settings";
 
 export default function UnitedChat() {
 
+	const [htmlCode, setHtmlCode] = useState<string>("");
+	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
 	const [currentPage, setCurrentPage] = useState<string>("editor")
 
 	useEffect(() => {
@@ -24,6 +27,7 @@ export default function UnitedChat() {
 
 	const [user, setUser] = useState<UserInformation | null>(null)
 	const [showSaveDialog, setShowSaveDialog] = useState<boolean>(false)
+	const [triggerReloadAlert, setTriggerReloadAlert] = useState(false);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,6 +50,19 @@ export default function UnitedChat() {
 						setCurrentPage("settings");
 					}
 					break;
+				case "r":
+					if (e.ctrlKey) {
+						e.preventDefault();
+						const theme = localStorage.getItem('chatTheme') || 'default';
+						TauriApi.CheckThemeBeforeReload(theme, htmlCode, cssCode).then((result) => {
+							if (result) {
+								return setTriggerReloadAlert(true);
+							}
+
+							window.location.reload()
+						})
+					}
+					break;
 				default:
 					break;
 			}
@@ -56,7 +73,7 @@ export default function UnitedChat() {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [showPreview])
+	}, [showPreview, htmlCode, cssCode]);
 
 
 	return (
@@ -80,6 +97,12 @@ export default function UnitedChat() {
 						user={user}
 						showSaveDialog={showSaveDialog}
 						setShowSaveDialog={setShowSaveDialog}
+						htmlCode={htmlCode}
+						cssCode={cssCode}
+						setHtmlCode={setHtmlCode}
+						setCssCode={setCssCode}
+						triggerReloadAlert={triggerReloadAlert}
+						setTriggerReloadAlert={setTriggerReloadAlert}
 					/>
 				) ||
 				currentPage === "settings" && (

@@ -15,7 +15,7 @@ import {handleCopy} from "@/components/component/Main/Helpers/webChatUtils";
 import TauriApi from "@/lib/Tauri";
 import React, {useState} from "react";
 
-type AlertsProps = {
+export type AlertsProps = {
 	showConfirmDialog: boolean;
 	setShowConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>;
 	dialogMessage: string;
@@ -25,6 +25,8 @@ type AlertsProps = {
 	htmlCode: string;
 	cssCode: string;
 	setNewTheme: React.Dispatch<React.SetStateAction<boolean>>;
+	triggerReloadAlert: boolean;
+	setTriggerReloadAlert: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function Alerts(
@@ -37,7 +39,9 @@ export default function Alerts(
 		setShowSaveDialog,
 		htmlCode,
 		cssCode,
-		setNewTheme
+		setNewTheme,
+		triggerReloadAlert,
+		setTriggerReloadAlert
 	}: AlertsProps
 ) {
 	const [copied, setCopied] = useState(false)
@@ -123,8 +127,29 @@ export default function Alerts(
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			<AlertDialog open={triggerReloadAlert} onOpenChange={setTriggerReloadAlert}>
+				<AlertDialogContent className="sm:max-w-[425px]">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="text-2xl">Reload Page</AlertDialogTitle>
+						<AlertDialogDescription className="text-center">
+							Are you sure you want to reload the page?<br/>
+							All unsaved changes will be lost. No take backs!
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => setTriggerReloadAlert(false)}>
+							Cancel
+						</AlertDialogAction>
+						<AlertDialogAction onClick={() => {
+							setTriggerReloadAlert(false)
+							window.location.reload();
+						}}>
+							Reload
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
-
-
 	)
 }

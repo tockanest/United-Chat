@@ -6,9 +6,10 @@ use crate::misc::editor::get_theme::get_themes;
 use crate::misc::editor::save_theme::save_theme;
 use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_auth};
 use chat::twitch::get_user::get_user;
-use chat::twitch::websocket_client::{connect_twitch_websocket, TwitchWebsocketChat};
+use chat::twitch::websocket_client::{connect_twitch_websocket, stop_connections, TwitchWebsocketChat};
 use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
 use misc::editor::get_theme::get_theme;
+use misc::qol::check_if_unsaved::check_if_unsaved;
 use misc::setup::{setup_complete, SetupState};
 use std::backtrace;
 use std::io::Write;
@@ -94,10 +95,12 @@ pub fn run() {
             skip_twitch_auth,
             twitch_deauth,
             connect_twitch_websocket,
+            stop_connections,
             get_user,
             get_theme,
             get_themes,
             save_theme,
+            check_if_unsaved,
             open_webchat_window,
             hide_webchat_window
         ])
