@@ -44,7 +44,7 @@ export default function WebChat() {
 	const processFadeOutQueue = useCallback(async () => {
 		// Remove expired messages immediately if queue length exceeds 15
 		if (fadeQueueRef.current.size > messagesLimit) {
-			console.log("Queue length exceeded 15, removing expired messages immediately");
+			console.info("Queue length exceeded 15, removing expired messages immediately");
 			const now = moment();
 			fadeQueueRef.current.forEach(id => {
 				const message = messages.find(msg => msg.message.id === id);
@@ -97,7 +97,7 @@ export default function WebChat() {
 
 	useEffect(() => {
 		if (debug) {
-			console.log("Debug mode enabled, skipping message cleanup");
+			console.debug("Debug mode enabled, skipping message cleanup");
 			return;
 		}
 		const cleanupInterval = setInterval(() => {
@@ -144,7 +144,7 @@ export default function WebChat() {
 		const ws = new WebSocket('ws://localhost:9888');
 
 		ws.onopen = () => {
-			console.log('WebSocket connection established');
+			console.info('WebSocket connection established');
 		};
 
 		ws.onmessage = (event) => {
@@ -155,12 +155,12 @@ export default function WebChat() {
 					...data.data
 				}
 			};
-			console.log("New message")
 			setMessages(prevMessages => [...prevMessages, newMessage as Message]);
 		};
 
 		ws.onclose = () => {
-			console.log('WebSocket connection closing');
+			console.info('WebSocket connection closed, closing window');
+			window.close();
 		};
 
 		return () => {
@@ -193,7 +193,7 @@ export default function WebChat() {
                 }
             `}
 			</style>
-			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="/styles/tailwind_complete.css" data-tailwind="disable-warning"></script>
 			{messages.map((msg, index) => (
 				<div
 					key={index}

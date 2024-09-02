@@ -38,7 +38,7 @@ export default function Header(
 		user
 	}: HeaderProps
 ) {
-	console.log(user)
+
 	return (
 		<header className="border-b px-4 py-2 flex items-center justify-between w-full">
 			<div className="container flex items-center space-x-4">

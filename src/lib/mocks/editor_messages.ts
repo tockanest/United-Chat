@@ -120,7 +120,7 @@ function randomColorHex() {
 
 export default function randomMessageObject(): Message {
 	const badges = userBadges();
-	console.log(badges);
+
 	return {
 		platform: randomPlatform(),
 		message: {

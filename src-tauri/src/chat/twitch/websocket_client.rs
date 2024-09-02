@@ -114,6 +114,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     ws_stream.send("QUIT".into()).await.unwrap();
     ws_server.close().await;
     *websocket_connection.lock().await = false;
+    stop_flag.store(false, Ordering::Relaxed);
 }
 
 #[tauri::command]

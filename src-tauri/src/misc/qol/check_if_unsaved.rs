@@ -15,6 +15,7 @@ pub(crate) async fn check_if_unsaved(
 
     match theme {
         Some((_, html_path, css_path)) => {
+            println!("{:?}", html_path);
             let html_code = std::fs::read_to_string(html_path).unwrap();
             let css_code = std::fs::read_to_string(css_path).unwrap();
 

@@ -31,7 +31,7 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
     Outer container that takes up the full width and height of its parent.
     This ensures that all the content inside has the necessary space to render fully.
     -->
-    <div class="flex flex-col items-start justify-center bg-transparent m-2 text-black max-w-[600px]">
+    <div class="flex flex-col items-start justify-center bg-transparent m-2 text-white max-w-[600px]">
         <!--
         Inner flex container holding the platform badge, username, and message.
         The 'flex-col' layout makes the inner elements stack vertically.
@@ -44,11 +44,12 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
             'flex-row' arranges the badges horizontally.
             'items-start' ensures these badges align at the top, preventing them from stretching vertically.
             -->
-            <div class="flex flex-row items-start">
+            <div class="flex flex-row items-start space-x-2 mr-2">
                 <!-- Placeholder for platform-specific badge (e.g., Twitch, YouTube) -->
                 {platform}
                 <!-- Displays user badges next to the platform badge -->
-                <img class="w-6 h-6" src={badges} alt="badge"/>
+                <!-- There is also: {badge_1} to {badge_3}. You can also use {formatedBadges (*WIP)} to set automatically badges. -->
+                {badges}
             </div>
 
             <!--
@@ -57,7 +58,7 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
             'items-start' ensures that both the username and message align at the top, which is crucial for keeping the username from being vertically centered when the message is long.
             'space-x-0.5' adds a small space between the username and the message.
             -->
-            <div class="flex flex-row items-start space-x-0.5 w-full break-words overflow-hidden text-ellipsis">
+            <div class="flex flex-row items-start space-x-0.5 w-full break-words overflow-hidden text-ellipsis space-x-2">
                 <!--
                 The username is styled with 'flex-none' to prevent it from stretching.
                 This ensures the username stays fixed in size, maintaining its position at the top left of the container, regardless of the message length.
@@ -147,11 +148,23 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
 }
 
 #[tauri::command]
-pub(crate) async fn get_themes() -> tauri::Result<Vec<(String, std::path::PathBuf, std::path::PathBuf)>> {
+pub(crate) async fn get_themes(app: AppHandle) -> tauri::Result<Vec<(String, std::path::PathBuf, std::path::PathBuf)>> {
     let themes_path = dirs::config_dir().ok_or("Failed to get config directory").unwrap().join("United Chat").join("themes");
 
     if !themes_path.exists() {
         std::fs::create_dir_all(&themes_path)?;
+        let default_theme = get_theme("default".to_string(), app).await.unwrap();
+
+        let default_theme_path = themes_path.join("default");
+        std::fs::create_dir_all(default_theme_path.clone())?;
+
+        let mut file = std::fs::File::create(default_theme_path.join("index.html"))?;
+        file.write_all(default_theme.html_code.as_bytes())?;
+
+        let mut css_file = std::fs::File::create(default_theme_path.join("style.css"))?;
+        css_file.write_all(default_theme.css_code.as_bytes())?;
+
+        return Ok(vec![("default".to_string(), default_theme_path.join("index.html"), default_theme_path.join("style.css"))]);
     }
 
     // Get all folders from the themes directory and filter out the ones that are not directories

@@ -111,7 +111,7 @@ export default function Editor(
 		setCombinedCode(`
       <html lang="en">
         <head>
-          <script src="https://cdn.tailwindcss.com"></script>
+          <script src="/styles/tailwind_complete.css" data-tailwind="disable-warning"></script>
           <style>
             ${cssCode};
             .message { display: flex; flex-direction: row; margin: 0; padding: 0; }

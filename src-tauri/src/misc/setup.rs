@@ -107,7 +107,7 @@ async fn backend_setup(app: AppHandle) {
         }
     };
 
-    let themes = get_themes().await.unwrap();
+    let themes = get_themes(app_clone.clone()).await.unwrap();
 
     // Manage the themes state
     app_clone.manage(crate::misc::editor::save_theme::ThemeState {
