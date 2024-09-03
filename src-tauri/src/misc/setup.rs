@@ -2,7 +2,10 @@ use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedI
 use crate::misc::editor::get_theme::get_themes;
 use keyring::Entry;
 use serde_json::json;
-use std::sync::Mutex;
+use sled::Db;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
 
@@ -14,6 +17,20 @@ pub(crate) struct SetupState {
 fn get_password(service: &str, username: &str) -> Result<String, keyring::Error> {
     let entry = Entry::new(service, username)?;
     entry.get_password()
+}
+
+fn get_database_path() -> PathBuf {
+    let path = dirs::config_dir().unwrap().join("United Chat").join("database");
+    if !path.exists() {
+        fs::create_dir_all(&path).expect("Failed to create directory");
+    }
+    path.join("united_chat.db")
+}
+
+pub(crate) fn initialize_database() -> Arc<Db> {
+    let db_path = get_database_path();
+    let db = sled::open(db_path).expect("Failed to open sled database");
+    Arc::new(db)
 }
 
 async fn backend_setup(app: AppHandle) {

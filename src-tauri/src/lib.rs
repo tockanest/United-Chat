@@ -1,55 +1,29 @@
 mod chat;
 mod misc;
 
-use crate::chat::twitch::auth::twitch_deauth;
-use crate::misc::editor::get_theme::get_themes;
-use crate::misc::editor::save_theme::save_theme;
-use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_auth};
+use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_auth, twitch_deauth};
 use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::{connect_twitch_websocket, stop_connections, TwitchWebsocketChat};
-use chat::youtube::get_video::{get_live_chat_cmd, get_video_cmd, youtube_polling_cmd};
+use chat::youtube::polling::{get_live_chat_cmd, get_video_cmd, youtube_polling_cmd};
+use chat::youtube::state_manager::{
+    delete_video_from_db, get_all_videos, get_video_from_db, store_new_livestream,
+    update_video, update_video_metadata, StoredVideos,
+};
 use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
-use misc::editor::get_theme::get_theme;
+use misc::editor::get_theme::{get_theme, get_themes};
+use misc::editor::save_theme::save_theme;
 use misc::qol::check_if_unsaved::check_if_unsaved;
-use misc::setup::{setup_complete, SetupState};
-use std::backtrace;
-use std::io::Write;
-use std::sync::Mutex;
-use tauri::{Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
+use misc::setup::{initialize_database, setup_complete, SetupState};
+
+use std::{backtrace, io::Write, sync::Mutex};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    std::panic::set_hook(Box::new(|info| {
-        let path = dirs::config_dir().unwrap().join("United Chat").join("logs");
+    let db = initialize_database();
 
-        if !path.exists() {
-            std::fs::create_dir_all(&path).expect("Failed to create directory");
-        }
-
-        // Timestamp: dd-mm-yyyy-hh-mm
-        let timestamp = chrono::Local::now().format("%d-%m-%Y-%H-%M");
-        let file_name = format!("error-{}.log", timestamp);
-        let file_path = path.join(file_name);
-
-        std::fs::File::create(file_path.clone()).expect("Failed to create file");
-
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(file_path)
-            .expect("Failed to open file");
-
-        let error = format!(
-            "Error: {}\nBacktrace: {:?}\n",
-            info,
-            backtrace::Backtrace::capture()
-        );
-
-        file.write_all(error.clone().as_bytes()).expect("Failed to write to file");
-
-        eprint!("{}", error)
-    }));
+    misc::qol::error_handling::setup_panic_hook();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_localhost::Builder::new(9889).build())
@@ -73,6 +47,8 @@ pub fn run() {
             frontend_task: false,
             backend_task: false,
         }))
+        .manage(Mutex::new(StoredVideos::default()))
+        .manage(db)
         .setup(|app| {
             #[cfg(windows)]
             app.deep_link().register("unitedchat").unwrap();
@@ -106,7 +82,13 @@ pub fn run() {
             hide_webchat_window,
             youtube_polling_cmd,
             get_video_cmd,
-            get_live_chat_cmd
+            get_live_chat_cmd,
+            store_new_livestream,
+            get_all_videos,
+            get_video_from_db,
+            delete_video_from_db,
+            update_video_metadata,
+            update_video
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

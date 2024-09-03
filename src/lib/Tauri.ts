@@ -202,6 +202,27 @@ export default class TauriApi {
 		});
 	}
 
+	/** Youtube Process */
+
+	public static async GetVideo(url: string) {
+		// Should follow: https://www.youtube.com/watch?v={id}
+		const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+		const match = url.match(regex);
+		if (match) {
+			return await this.command<Video>("get_video_cmd", {id: match[1]});
+		}
+
+		throw new Error("Invalid URL");
+	}
+
+	public static async GetAllVideos() {
+		return await this.command<Video[]>("get_all_videos", {update_status: true});
+	}
+
+	public static async StoreVideo(video: Video) {
+		return await this.command<boolean>("store_new_livestream", {data: video});
+	}
+
 	/**
 	 * Invokes a Tauri command.
 	 * @private

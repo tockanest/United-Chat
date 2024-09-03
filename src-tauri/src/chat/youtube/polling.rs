@@ -12,6 +12,7 @@ pub(crate) struct VideoInfo {
     pub(crate) scheduled_start_time: Option<String>,
     pub(crate) client_version: Option<String>,
     pub(crate) video_id: Option<String>,
+    pub(crate) video_name: Option<String>,
 }
 
 fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
@@ -23,14 +24,16 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
         scheduled_start_time: None,
         client_version: None,
         video_id: None,
+        video_name: None,
     };
 
     let re = regex::Regex::new(r#""isReplay"\s*:\s*(true)"#).unwrap();
     if let Some(replay) = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string())) {
         if replay == "true" {
-            return Err("The video is a replay and cannot be set as a live video".to_string());
+            video_info.is_replay = Some(true);
+        } else {
+            video_info.is_replay = Some(false);
         }
-        video_info.is_replay = Some(true);
     }
 
     let re = regex::Regex::new(r#""INNERTUBE_API_KEY"\s*:\s*"([^"]+)""#).unwrap();
@@ -70,10 +73,14 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
         return Err("Cannot find the video ID".to_string());
     }
 
+    // Get title from <title> tag
+    let re = regex::Regex::new(r#"<title>([^<]+)</title>"#).unwrap();
+    video_info.video_name = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
+
     Ok(video_info)
 }
 
-async fn get_video(id: &str) -> VideoInfo {
+async fn get_video(id: &str) -> Result<VideoInfo, String> {
     let request_url = format!("https://www.youtube.com/watch?v={}", id);
     let request = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0")
@@ -86,8 +93,8 @@ async fn get_video(id: &str) -> VideoInfo {
 
     // Get the raw data
     let response = request.text().await.unwrap();
-    let raw_data = retrieve_video_info(&response).unwrap();
-    raw_data
+    let raw_data = retrieve_video_info(&response)?;
+    Ok(raw_data)
 }
 
 fn preprocess_data(data: Vec<Value>) -> Vec<Value> {
@@ -183,7 +190,7 @@ fn parse_message_type(data: &Vec<Value>) -> Result<Vec<YoutubeResponse>, ()> {
                 author_name,
                 author_badges: badges_urls,
                 message: message_text,
-                message_emotes: Vec::new(), // Modify this as needed
+                message_emotes: Vec::new(),
                 timestamp,
                 tracking_params,
             };
@@ -224,7 +231,6 @@ async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String)
 
     let text_response = request.text().await.unwrap();
     let json_response: Value = serde_json::from_str(&text_response).unwrap();
-    // println!("{:?}", response);
     let action = json_response["continuationContents"]["liveChatContinuation"]["actions"].as_array().unwrap();
 
     if action.is_empty() {
@@ -256,7 +262,7 @@ async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String)
 }
 
 async fn youtube_polling(interval: u64, live_id: &str) {
-    let video = get_video(live_id).await;
+    let video = get_video(live_id).await.unwrap();
     let mut continuation = get_live_chat(video.clone()).await.unwrap().1;
 
     loop {
@@ -269,7 +275,7 @@ async fn youtube_polling(interval: u64, live_id: &str) {
 
 
 #[tauri::command]
-pub(crate) async fn get_video_cmd(id: String) -> VideoInfo {
+pub(crate) async fn get_video_cmd(id: String) -> Result<VideoInfo, String> {
     get_video(&id).await
 }
 
@@ -294,7 +300,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_live_chat_cmd() {
-        let video = get_video("WrW-QlNG1eo").await;
+        let video = get_video("WrW-QlNG1eo").await.unwrap();
         get_live_chat(video).await.expect("TODO: panic message");
     }
 

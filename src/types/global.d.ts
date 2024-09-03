@@ -76,6 +76,17 @@ declare global {
 
 	type AvailableThemes = [string, string, string][];
 
+	type Video = {
+		is_replay: boolean | null
+		api_key: string
+		stream_type: "scheduled" | "live" | "replay"
+		continuation: string
+		scheduled_start_time: string | null
+		client_version: string
+		video_id: string
+		video_name: string
+	}
+
 }
 
 export {}
