@@ -7,6 +7,7 @@ use crate::misc::editor::save_theme::save_theme;
 use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_auth};
 use chat::twitch::get_user::get_user;
 use chat::twitch::websocket_client::{connect_twitch_websocket, stop_connections, TwitchWebsocketChat};
+use chat::youtube::get_video::{get_live_chat_cmd, get_video_cmd, youtube_polling_cmd};
 use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
 use misc::editor::get_theme::get_theme;
 use misc::qol::check_if_unsaved::check_if_unsaved;
@@ -102,7 +103,10 @@ pub fn run() {
             save_theme,
             check_if_unsaved,
             open_webchat_window,
-            hide_webchat_window
+            hide_webchat_window,
+            youtube_polling_cmd,
+            get_video_cmd,
+            get_live_chat_cmd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

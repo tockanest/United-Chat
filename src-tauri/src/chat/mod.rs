@@ -1,3 +1,3 @@
 pub(crate) mod twitch;
 mod websocket;
-mod youtube;
+pub(crate) mod youtube;

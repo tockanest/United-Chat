@@ -1,1 +1,2 @@
-pub(crate) mod message_renderer_structs;
+pub(crate) mod youtube_response;
+pub(crate) mod types;

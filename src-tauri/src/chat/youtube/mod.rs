@@ -1,3 +1,3 @@
-mod get_video;
-pub(crate) mod youtube_polling;
+#[macro_use]
+pub(crate) mod get_video;
 mod structs;
