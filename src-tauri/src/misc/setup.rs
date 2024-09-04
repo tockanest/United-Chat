@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
+use crate::chat::youtube::state_manager::get_all_videos;
 
 pub(crate) struct SetupState {
     pub(crate) frontend_task: bool,
@@ -24,7 +25,8 @@ fn get_database_path() -> PathBuf {
     if !path.exists() {
         fs::create_dir_all(&path).expect("Failed to create directory");
     }
-    path.join("united_chat.db")
+
+    path
 }
 
 pub(crate) fn initialize_database() -> Arc<Db> {
@@ -130,6 +132,8 @@ async fn backend_setup(app: AppHandle) {
     app_clone.manage(crate::misc::editor::save_theme::ThemeState {
         themes,
     });
+
+    get_all_videos(app_clone.clone(), Option::from(true), None).await.unwrap();
 }
 
 #[tauri::command]

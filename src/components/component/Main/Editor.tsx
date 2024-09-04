@@ -154,7 +154,27 @@ export default function Editor(
 				clearInterval(cleanupInterval);
 			}
 		} else {
-			TauriApi.ConnectTwitchWebsocket();
+			const startEverything = async () => {
+				TauriApi.ConnectTwitchWebsocket();
+				const getYtStreams = await TauriApi.GetAllVideos();
+				console.log(getYtStreams);
+				if (getYtStreams.length > 0) {
+					// Get the first stream that has the live status
+					const liveStream = getYtStreams.find(stream => stream.stream_type === "live");
+
+					if (liveStream) {
+						TauriApi.StartYoutubePolling(liveStream, 1);
+						console.log("Polling started");
+					}
+
+					console.log("No live streams found")
+				}
+
+				console.log("Everything should be started now");
+			}
+
+			startEverything();
+
 		}
 
 	}, [startWebsocket]);

@@ -12,13 +12,23 @@ import {Edit, RefreshCw, Trash2, Twitch, Youtube} from "lucide-react"
 import {useToast} from "@/hooks/use-toast"
 import {Toaster} from "@/components/ui/toaster"
 import TauriApi from "@/lib/Tauri"
-import moment from "moment";
+import moment from "moment"
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from "@/components/ui/alert-dialog"
 
 type LiveStream = {
 	id: string
 	name: string
 	scheduledTime: string | null
-	status: 'live' | 'scheduled' | 'replay'
+	status: 'live' | 'scheduled' | 'offline'
 }
 
 type ChatTheme = {
@@ -34,6 +44,8 @@ export default function AppSettings() {
 	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 	const [newLiveStream, setNewLiveStream] = useState({url: ''})
 	const [isLoading, setIsLoading] = useState(false)
+	const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+	const [pendingVideo, setPendingVideo] = useState<any>(null)
 
 	const [appTheme, setAppTheme] = useState('system')
 
@@ -64,8 +76,21 @@ export default function AppSettings() {
 	}
 
 	const handleRemoveSelected = () => {
-		const newStreams = liveStreams.filter(stream => !selectedStreams.includes(stream.id) || stream.status === 'live')
-		setLiveStreams(newStreams)
+		const streamsToRemove = liveStreams.filter(stream => selectedStreams.includes(stream.id))
+		const idsToRemove = streamsToRemove.map(stream => stream.id)
+
+		idsToRemove.forEach(async (id) => {
+			const removeStream = await TauriApi.DeleteVideo(id)
+			if (!removeStream) {
+				return toast({
+					title: "Error",
+					description: "An error occurred while removing the live stream.",
+					variant: "destructive",
+				})
+			}
+		})
+
+		setLiveStreams(liveStreams.filter(stream => !idsToRemove.includes(stream.id)))
 		setSelectedStreams([])
 	}
 
@@ -73,37 +98,20 @@ export default function AppSettings() {
 		setIsLoading(true)
 		try {
 			const video = await TauriApi.GetVideo(newLiveStream.url)
-			const storeVideo = await TauriApi.StoreVideo(video)
 
-			if (!storeVideo) {
-				return toast({
-					title: "Error",
-					description: "An error occurred while adding the live stream.",
-					variant: "destructive",
-				})
+			const liveStreamsCount = liveStreams.filter(stream => stream.status === 'live').length
+			if (video.stream_type === 'live' && liveStreamsCount > 0) {
+				setPendingVideo(video)
+				setShowConfirmDialog(true)
+				return
 			}
 
-			setLiveStreams([
-				...liveStreams,
-				{
-					id: video.video_id,
-					name: video.video_name,
-					scheduledTime: video.scheduled_start_time,
-					status: video.stream_type,
-				}
-			])
-
-			toast({
-				title: "Success",
-				description: "New live stream added successfully.",
-			})
-
-			setIsAddDialogOpen(false)
-		} catch (err) {
+			await addVideoToStreams(video)
+		} catch (err: any) {
 			console.log(err)
 			toast({
 				title: "Error",
-				description: (typeof err === 'string' ? err : err as string) || "An error occurred.",
+				description: (typeof err === 'string' ? err : err.error as string) || "An error occurred.",
 				variant: "destructive",
 			})
 		} finally {
@@ -111,21 +119,81 @@ export default function AppSettings() {
 		}
 	}
 
+	const addVideoToStreams = async (video: any) => {
+
+		const storeVideo = await TauriApi.StoreVideo(video)
+
+		if (!storeVideo) {
+			return toast({
+				title: "Error",
+				description: "An error occurred while adding the live stream.",
+				variant: "destructive",
+			})
+		}
+
+		setLiveStreams([
+			...liveStreams,
+			{
+				id: video.video_id,
+				name: video.video_name,
+				scheduledTime: video.scheduled_start_time,
+				status: video.stream_type,
+			}
+		])
+
+		toast({
+			title: "Success",
+			description: "New live stream added successfully.",
+		})
+
+		setIsAddDialogOpen(false)
+		setNewLiveStream({url: ''})
+	}
+
+	const handleConfirmAddLive = async () => {
+		if (pendingVideo) {
+			await addVideoToStreams(pendingVideo)
+			setPendingVideo(null)
+		}
+		setShowConfirmDialog(false)
+	}
+
+	useEffect(() => {
+		const liveStreamsCount = liveStreams.filter(stream => stream.status === 'live').length
+
+		if (liveStreamsCount > 1) {
+			toast({
+				title: "Warning",
+				description: "You have more than one live stream running at the same time. You should not have more than one live stream running at the same time to avoid issues.",
+				variant: "destructive",
+			})
+		}
+	}, [liveStreams])
+
 	useEffect(() => {
 		const fetchLiveStreams = async () => {
-			const streams = await TauriApi.GetAllVideos();
-			console.log(streams)
-			setLiveStreams(streams.map(stream => ({
-				id: stream.video_id,
-				name: stream.video_name,
-				// Format unix timestamp to human-readable date
-				scheduledTime: stream.scheduled_start_time ? moment.unix(parseInt(stream.scheduled_start_time)).format('L, hh:mm') : null,
-				status: stream.stream_type,
-			})))
+			try {
+				const streams = await TauriApi.GetAllVideos()
+				console.log(streams)
+				setLiveStreams(streams.map(stream => ({
+					id: stream.video_id,
+					name: stream.video_name,
+					scheduledTime: stream.scheduled_start_time ? moment.unix(parseInt(stream.scheduled_start_time)).format('L, hh:mm') : null,
+					status: stream.stream_type,
+				})))
+			} catch (e) {
+				if (typeof e === "string") {
+					toast({
+						title: "Error",
+						description: `An error occurred while fetching live streams: ${e}`,
+						variant: "destructive",
+					})
+				}
+			}
 		}
 
 		fetchLiveStreams()
-	}, []);
+	}, [])
 
 	return (
 		<div className="container mx-auto p-4">
@@ -217,12 +285,14 @@ export default function AppSettings() {
 											<TableCell>{stream.name}</TableCell>
 											<TableCell>{stream.scheduledTime || 'Not scheduled'}</TableCell>
 											<TableCell>
-												<span className={`px-2 py-1 rounded-full text-xs font-semibold
-												${stream.status === 'live' ? 'bg-green-100 text-green-800' :
-													stream.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-														'bg-gray-100 text-gray-800'}`}>
-												{stream.status.charAt(0).toUpperCase() + stream.status.slice(1)}
-												</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold
+                          ${stream.status === 'live' ? 'bg-green-100 text-green-800' :
+	                        stream.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+		                        stream.status === 'offline' ? 'bg-yellow-100 text-red-500' : 'bg-gray-100 text-gray-800'
+                        }`}
+                        >
+                          {stream.status.charAt(0).toUpperCase() + stream.status.slice(1)}
+                        </span>
 											</TableCell>
 											<TableCell className="text-right">
 												<Button variant="ghost" size="icon" className="mr-2">
@@ -318,6 +388,28 @@ export default function AppSettings() {
 					</Card>
 				</TabsContent>
 			</Tabs>
+			<AlertDialog open={showConfirmDialog}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Confirm Adding Live Stream</AlertDialogTitle>
+						<AlertDialogDescription>
+							There is already a live stream running. Are you sure you want to add another one?<br/><br/>
+							Adding another stream may cause issues such as:
+							<ul className="list-disc pl-4">
+								<li>Chat messages may not be displayed correctly</li>
+								<li>Performance may be impacted</li>
+								<li>Other unknown issues</li>
+							</ul>
+							<br/>
+							Please make sure you know what you are doing before continuing.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>Cancel</AlertDialogCancel>
+						<AlertDialogAction onClick={handleConfirmAddLive}>Confirm</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<Toaster/>
 		</div>
 	)

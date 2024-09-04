@@ -58,7 +58,6 @@ export default function WebChat() {
 		// @ts-ignore: Process fading out for messages in the queue
 		for (const id of fadeQueueRef.current) {
 			if (!fadeOutEnabled) continue; // Skip if fade-out is disabled
-
 			const messageElement = document.getElementById(id);
 
 			if (messageElement) {
@@ -111,7 +110,14 @@ export default function WebChat() {
 
 						return !shouldBeRemoved; // Keep message if it shouldn't be removed yet
 					} else if (fadeOutEnabled) {
-						const messageTime = moment(msg.message.timestamp);
+						let messageTime: moment.Moment | null = null;
+						if(msg.platform === "twitch") {
+							messageTime = moment(msg.message.timestamp);
+						} else if(msg.platform === "youtube") {
+							// Youtube uses uSec timestamp and this might cause the message to not be displayed for long enough
+							// Adding 5 seconds to the timestamp to make sure the message is displayed for at least 5 seconds
+							messageTime = moment(Number(msg.message.timestamp) / 1000 + 15000);
+						}
 						const shouldFadeOut = now.diff(messageTime, 'seconds') >= removalTimeSeconds;
 
 						if (shouldFadeOut && !msg.fadingOut) {
@@ -155,6 +161,7 @@ export default function WebChat() {
 					...data.data
 				}
 			};
+			console.log(newMessage);
 			setMessages(prevMessages => [...prevMessages, newMessage as Message]);
 		};
 

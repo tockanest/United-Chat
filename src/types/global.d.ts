@@ -29,21 +29,16 @@ declare global {
 		tags: [string, string][],
 	}
 
-	// This will change 100%, do not expect this to work on next update
 	type YoutubeResponse = {
 		id: string,
-		timestamp: number;
-		display_name: string;
-		user_color: string | null;
-		user_badges: string[] | [];
-		message: string;
-		emotes: string[] | [];
-		raw_data: {
-			raw_message: string;
-			raw_emotes: string;
-		};
-		tags: [string, string][];
-	};
+		author_id: string,
+		author_name: string,
+		author_badges: string[] | [],
+		message: string,
+		message_emotes: [string, string][],
+		timestamp: string,
+		tracking_params: string,
+	}
 
 	type TwitchMessage = {
 		platform: "twitch";
@@ -79,12 +74,17 @@ declare global {
 	type Video = {
 		is_replay: boolean | null
 		api_key: string
-		stream_type: "scheduled" | "live" | "replay"
+		stream_type: "scheduled" | "live" | "offline"
 		continuation: string
 		scheduled_start_time: string | null
 		client_version: string
 		video_id: string
 		video_name: string
+	}
+
+	type VideoError = {
+		video_id: string,
+		error: string
 	}
 
 }

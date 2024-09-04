@@ -19,20 +19,40 @@ function returnAllBadges(badges: string[]) {
 }
 
 function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
-
-	return template
-		.replaceAll("{id}", message.id)
-		.replaceAll("{user}", message.display_name)
-		.replaceAll("{formatedMessage}", message.message.substring(0, 100))
-		.replaceAll("{raw_message}", message.raw_data.raw_message)
-		.replaceAll("{color}", message.user_color || "")
-		.replaceAll("{profile_picture}", "")
-		.replaceAll("{platform}", formatPlatformBadge(platform))
-		.replaceAll("{\" \"}", "⠀")
-		.replaceAll("{badge_1}", message.user_badges[0] || "")
-		.replaceAll("{badge_2}", message.user_badges[1] || "")
-		.replaceAll("{badge_3}", message.user_badges[2] || "")
-		.replaceAll("{badges}", returnAllBadges(message.user_badges))
+	switch (platform) {
+		case "twitch": {
+			message = message as TwitchResponse;
+			return template
+				.replaceAll("{id}", message.id)
+				.replaceAll("{user}", message.display_name)
+				.replaceAll("{formatedMessage}", message.message.substring(0, 100))
+				.replaceAll("{raw_message}", message.raw_data.raw_message)
+				.replaceAll("{color}", message.user_color || "")
+				.replaceAll("{profile_picture}", "")
+				.replaceAll("{platform}", formatPlatformBadge(platform))
+				.replaceAll("{\" \"}", "⠀")
+				.replaceAll("{badge_1}", message.user_badges[0] || "")
+				.replaceAll("{badge_2}", message.user_badges[1] || "")
+				.replaceAll("{badge_3}", message.user_badges[2] || "")
+				.replaceAll("{badges}", returnAllBadges(message.user_badges))
+		}
+		case "youtube": {
+			message = message as YoutubeResponse;
+			return template
+				.replaceAll("{id}", message.id)
+				.replaceAll("{user}", message.author_name)
+				.replaceAll("{formatedMessage}", message.message.substring(0, 100))
+				.replaceAll("{raw_message}", message.message)
+				.replaceAll("{color}", "")
+				.replaceAll("{profile_picture}", "")
+				.replaceAll("{platform}", formatPlatformBadge(platform))
+				.replaceAll("{\" \"}", "⠀")
+				.replaceAll("{badge_1}", message.author_badges[0] || "")
+				.replaceAll("{badge_2}", message.author_badges[1] || "")
+				.replaceAll("{badge_3}", message.author_badges[2] || "")
+				.replaceAll("{badges}", returnAllBadges(message.author_badges))
+		}
+	}
 }
 
 function handleConfigChange(key: keyof ConfigState, value: number | boolean, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {

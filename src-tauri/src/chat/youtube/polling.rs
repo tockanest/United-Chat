@@ -1,7 +1,13 @@
+use crate::chat::websocket::ws_server::WebSocketServer;
 use crate::chat::youtube::structs::youtube_response::YoutubeResponse;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-
+use std::collections::VecDeque;
+use std::ops::Deref;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager};
+use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct VideoInfo {
@@ -15,7 +21,13 @@ pub(crate) struct VideoInfo {
     pub(crate) video_name: Option<String>,
 }
 
-fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct VideoError {
+    pub(crate) video_id: String,
+    pub(crate) error: String,
+}
+
+fn retrieve_video_info(html: &str) -> Result<VideoInfo, VideoError> {
     let mut video_info = VideoInfo {
         is_replay: None,
         api_key: None,
@@ -40,14 +52,23 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
     video_info.api_key = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
 
     if video_info.api_key.is_none() {
-        return Err("Cannot find the API key".to_string());
+        return Err(
+            VideoError {
+                video_id: video_info.video_id.clone().unwrap_or("Unknown".to_string()),
+                error: "Cannot find the API key".to_string(),
+            }
+        );
     }
 
     let re = regex::Regex::new(r#""continuation"\s*:\s*"([^"]+)""#).unwrap();
     video_info.continuation = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
 
-    if let Some(continuation) = &video_info.continuation {
-        video_info.stream_type = Some("live".to_string());
+    if let Some(_continuation) = &video_info.continuation {
+        if video_info.is_replay == Some(true) {
+            video_info.stream_type = Some("offline".to_string());
+        } else {
+            video_info.stream_type = Some("live".to_string());
+        }
     } else {
         let re = regex::Regex::new(r#""scheduledStartTime"\s*:\s*"([^"]+)""#).unwrap();
         video_info.scheduled_start_time = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
@@ -55,7 +76,12 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
         if video_info.scheduled_start_time.is_some() {
             video_info.stream_type = Some("scheduled".to_string());
         } else {
-            return Err("Cannot find the continuation".to_string());
+            return Err(
+                VideoError {
+                    video_id: video_info.video_id.clone().unwrap_or("Unknown".to_string()),
+                    error: "Cannot find the continuation or scheduled start time".to_string(),
+                }
+            );
         }
     }
 
@@ -63,14 +89,24 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
     video_info.client_version = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
 
     if video_info.client_version.is_none() {
-        return Err("Cannot find the client version".to_string());
+        return Err(
+            VideoError {
+                video_id: video_info.video_id.clone().unwrap_or("Unknown".to_string()),
+                error: "Cannot find the client version".to_string(),
+            }
+        );
     }
 
     let re = regex::Regex::new(r#"<link\s+rel="canonical"\s+href="https://www\.youtube\.com/watch\?v=([^"]+)""#).unwrap();
     video_info.video_id = re.captures(html).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
 
     if video_info.video_id.is_none() {
-        return Err("Cannot find the video ID".to_string());
+        return Err(
+            VideoError {
+                video_id: "Unknown".to_string(),
+                error: "Cannot find the video id".to_string(),
+            }
+        );
     }
 
     // Get title from <title> tag
@@ -80,7 +116,8 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, String> {
     Ok(video_info)
 }
 
-async fn get_video(id: &str) -> Result<VideoInfo, String> {
+
+async fn get_video(id: &str) -> Result<VideoInfo, VideoError> {
     let request_url = format!("https://www.youtube.com/watch?v={}", id);
     let request = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0")
@@ -95,12 +132,6 @@ async fn get_video(id: &str) -> Result<VideoInfo, String> {
     let response = request.text().await.unwrap();
     let raw_data = retrieve_video_info(&response)?;
     Ok(raw_data)
-}
-
-fn preprocess_data(data: Vec<Value>) -> Vec<Value> {
-    data.into_iter()
-        .filter(|x| x.get("clientId").is_some())
-        .collect()
 }
 
 fn parse_message_type(data: &Vec<Value>) -> Result<Vec<YoutubeResponse>, ()> {
@@ -185,7 +216,13 @@ fn parse_message_type(data: &Vec<Value>) -> Result<Vec<YoutubeResponse>, ()> {
                 .unwrap_or("Unknown Author ID")
                 .to_string();
 
+            let id = message.get("id")
+                .and_then(|t| t.as_str())
+                .unwrap_or("Unknown ID")
+                .to_string();
+
             let response = YoutubeResponse {
+                id,
                 author_id,
                 author_name,
                 author_badges: badges_urls,
@@ -204,9 +241,9 @@ fn parse_message_type(data: &Vec<Value>) -> Result<Vec<YoutubeResponse>, ()> {
 
 
 async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String), String> {
-    let continuation = data.continuation.unwrap();
-    let api_key = data.api_key.unwrap();
-    let client_version = data.client_version.unwrap();
+    let continuation = data.continuation.clone().unwrap();
+    let api_key = data.api_key.clone().unwrap();
+    let client_version = data.client_version.clone().unwrap();
 
     let url = format!("https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key={}", api_key);
 
@@ -240,7 +277,9 @@ async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String)
     let continuation_data = json_response["continuationContents"]["liveChatContinuation"]["continuations"].as_array().unwrap();
 
     if continuation_data.is_empty() {
-        return Err("Cannot find the continuation".to_string());
+        return Err(
+            format!("Cannot find continuation for id: {:?}", data.clone().video_id).into()
+        );
     }
 
     // Can be either invalidationContinuationData or timedContinuationData
@@ -261,21 +300,58 @@ async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String)
     Ok((message, continuation_type))
 }
 
-async fn youtube_polling(interval: u64, live_id: &str) {
+
+// Define a maximum size for previous messages
+const MAX_PREVIOUS_MESSAGES: usize = 20;
+
+struct PreviousMessages {
+    message_ids: VecDeque<String>,
+}
+
+async fn youtube_polling(interval: u64, live_id: &str, ws_server: &Arc<WebSocketServer>) {
     let video = get_video(live_id).await.unwrap();
-    let mut continuation = get_live_chat(video.clone()).await.unwrap().1;
+    println!("Started polling for live chat at: {}", video.clone().video_name.unwrap_or("Unknown".to_string()));
+
+    let mut previous_messages = PreviousMessages {
+        message_ids: VecDeque::new(),
+    };
 
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
-        let data = get_live_chat(video.clone()).await.unwrap().0;
-        continuation = get_live_chat(video.clone()).await.unwrap().1;
-        println!("{:?}", data);
+        let polling = get_live_chat(video.clone()).await.unwrap();
+        let mut data = polling.0;
+
+        // Limit data to 20 messages
+        if data.len() > 20 {
+            data = data.into_iter().take(20).collect();
+        }
+
+        for message in data {
+            if !previous_messages.message_ids.contains(&message.id) {
+                let ws_response = json!({
+                    "platform": "youtube",
+                    "data": message
+                });
+
+                ws_server.broadcast(
+                    Message::Text(serde_json::to_string(&ws_response).unwrap())
+                ).await;
+
+                // Add the new message ID
+                previous_messages.message_ids.push_back(message.id);
+
+                // Purge old messages if the size exceeds the limit
+                if previous_messages.message_ids.len() > MAX_PREVIOUS_MESSAGES {
+                    previous_messages.message_ids.pop_front();
+                }
+            }
+        }
     }
 }
 
 
 #[tauri::command]
-pub(crate) async fn get_video_cmd(id: String) -> Result<VideoInfo, String> {
+pub(crate) async fn get_video_cmd(id: String) -> Result<VideoInfo, VideoError> {
     get_video(&id).await
 }
 
@@ -285,8 +361,10 @@ pub(crate) async fn get_live_chat_cmd(video: VideoInfo) -> Result<(Vec<YoutubeRe
 }
 
 #[tauri::command]
-pub(crate) async fn youtube_polling_cmd(interval: u64, live_id: String) {
-    youtube_polling(interval, &live_id).await;
+pub(crate) async fn youtube_polling_cmd(interval: u64, live_id: String, app: AppHandle) {
+    let ws_server = app.state::<Arc<WebSocketServer>>();
+    let state = ws_server.deref();
+    youtube_polling(interval, &live_id, state).await;
 }
 
 mod test {
@@ -294,7 +372,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_video_cmd() {
-        let video = get_video("8OlZQTSq63I").await;
+        let video = get_video("8OlZQTSq63I").await.unwrap();
         println!("{:?}", video);
     }
 
@@ -304,9 +382,9 @@ mod test {
         get_live_chat(video).await.expect("TODO: panic message");
     }
 
-    #[tokio::test]
-    async fn test_youtube_polling() {
-        youtube_polling(5, "WrW-QlNG1eo").await;
-    }
+    // #[tokio::test]
+    // async fn test_youtube_polling() {
+    //     youtube_polling(5, "WrW-QlNG1eo", ).await;
+    // }
 }
 

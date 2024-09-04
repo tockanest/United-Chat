@@ -216,11 +216,23 @@ export default class TauriApi {
 	}
 
 	public static async GetAllVideos() {
-		return await this.command<Video[]>("get_all_videos", {update_status: true});
+		return await this.command<Video[]>("get_all_videos", {updateStatus: true});
 	}
 
-	public static async StoreVideo(video: Video) {
-		return await this.command<boolean>("store_new_livestream", {data: video});
+	public static async StoreVideo(video: Video): Promise<boolean | VideoError> {
+		try {
+			return await this.command<boolean>("store_new_livestream", {data: video});
+		} catch (e: any) {
+			throw e as VideoError;
+		}
+	}
+
+	public static async DeleteVideo(videoId: string) {
+		return await this.command<boolean>("delete_video_from_db", {id: videoId});
+	}
+
+	public static async StartYoutubePolling(video: Video, interval: number) {
+		return await this.command<boolean>("youtube_polling_cmd", {liveId: video.video_id, interval});
 	}
 
 	/**

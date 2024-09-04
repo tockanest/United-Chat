@@ -68,6 +68,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     };
 
     let ws_server = Arc::new(WebSocketServer::new());
+
     let ws_server_clone = Arc::clone(&ws_server);
 
     tokio::spawn(async move {
@@ -78,6 +79,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
         }
     });
 
+    app.manage(ws_server.clone());
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
