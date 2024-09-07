@@ -145,7 +145,7 @@ export default function Editor(
 				const now = Date.now();
 
 				// Check if a message is older than 10 seconds
-				setMessages((prevMessages) => prevMessages.filter((msg) => now - msg.message.timestamp < 10000));
+				setMessages((prevMessages) => prevMessages.filter((msg) => now - Number(msg.message.timestamp) < 10000));
 			}, 1000);
 
 
@@ -163,6 +163,7 @@ export default function Editor(
 					const liveStream = getYtStreams.find(stream => stream.stream_type === "live");
 
 					if (liveStream) {
+						console.log(liveStream)
 						TauriApi.StartYoutubePolling(liveStream, 1);
 						console.log("Polling started");
 					}

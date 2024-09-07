@@ -31,7 +31,7 @@ pub(crate) struct TwitchResponse {
 
 pub(crate) async fn message_processor(
     msg: String,
-    ws_server: Arc<WebSocketServer>,
+    ws_server: &WebSocketServer,
     auth_state: State<'_, ImplicitGrantFlow>,
     user_information: UserInformationState,
 ) {

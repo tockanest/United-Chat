@@ -1,3 +1,4 @@
+use crate::chat::twitch::websocket_client::TwitchWebsocketChat;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use crate::chat::youtube::structs::youtube_response::YoutubeResponse;
 use rand::Rng;
@@ -5,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::ops::Deref;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio_tungstenite::tungstenite::Message;
@@ -117,7 +119,7 @@ fn retrieve_video_info(html: &str) -> Result<VideoInfo, VideoError> {
 }
 
 
-async fn get_video(id: &str) -> Result<VideoInfo, VideoError> {
+async fn get_video(id: String) -> Result<VideoInfo, VideoError> {
     let request_url = format!("https://www.youtube.com/watch?v={}", id);
     let request = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0")
@@ -308,22 +310,33 @@ struct PreviousMessages {
     message_ids: VecDeque<String>,
 }
 
-async fn youtube_polling(interval: u64, live_id: &str, ws_server: &Arc<WebSocketServer>) {
+#[tauri::command]
+pub(crate) async fn youtube_polling_cmd(interval: u64, live_id: String, app: AppHandle) {
     let video = get_video(live_id).await.unwrap();
-    println!("Started polling for live chat at: {}", video.clone().video_name.unwrap_or("Unknown".to_string()));
+
+    let state = app.state::<Arc<WebSocketServer>>();
+    let ws_server = state.deref();
+
+    let twitch_state = app.state::<TwitchWebsocketChat>();
+    let cancel_flag = Arc::clone(&twitch_state.stop_flag);
 
     let mut previous_messages = PreviousMessages {
         message_ids: VecDeque::new(),
     };
 
     loop {
+        if cancel_flag.load(std::sync::atomic::Ordering::Relaxed) {
+            println!("Stopping YouTube polling...");
+            break;
+        }
+
         tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
         let polling = get_live_chat(video.clone()).await.unwrap();
         let mut data = polling.0;
 
-        // Limit data to 20 messages
-        if data.len() > 20 {
-            data = data.into_iter().take(20).collect();
+        // Limit data to the latest 20 messages
+        if data.len() > MAX_PREVIOUS_MESSAGES {
+            data = data.split_off(data.len() - MAX_PREVIOUS_MESSAGES);
         }
 
         for message in data {
@@ -352,7 +365,7 @@ async fn youtube_polling(interval: u64, live_id: &str, ws_server: &Arc<WebSocket
 
 #[tauri::command]
 pub(crate) async fn get_video_cmd(id: String) -> Result<VideoInfo, VideoError> {
-    get_video(&id).await
+    get_video(id).await
 }
 
 #[tauri::command]
@@ -360,25 +373,19 @@ pub(crate) async fn get_live_chat_cmd(video: VideoInfo) -> Result<(Vec<YoutubeRe
     get_live_chat(video).await
 }
 
-#[tauri::command]
-pub(crate) async fn youtube_polling_cmd(interval: u64, live_id: String, app: AppHandle) {
-    let ws_server = app.state::<Arc<WebSocketServer>>();
-    let state = ws_server.deref();
-    youtube_polling(interval, &live_id, state).await;
-}
 
 mod test {
     use super::*;
 
     #[tokio::test]
     async fn test_get_video_cmd() {
-        let video = get_video("8OlZQTSq63I").await.unwrap();
+        let video = get_video("8OlZQTSq63I".to_string()).await.unwrap();
         println!("{:?}", video);
     }
 
     #[tokio::test]
     async fn test_get_live_chat_cmd() {
-        let video = get_video("WrW-QlNG1eo").await.unwrap();
+        let video = get_video("WrW-QlNG1eo".to_string()).await.unwrap();
         get_live_chat(video).await.expect("TODO: panic message");
     }
 

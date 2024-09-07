@@ -118,24 +118,45 @@ function randomColorHex() {
 	return "#" + Math.floor(Math.random() * 16777215).toString(16);
 }
 
-export default function randomMessageObject(): Message {
+export default function randomMessageObject(): PlatformMessage<"twitch" | "youtube"> {
 	const badges = userBadges();
 
-	return {
-		platform: randomPlatform(),
-		message: {
-			id: randomIds(),
-			timestamp: Date.now(),
-			display_name: randomUsername(),
-			user_color: randomColorHex(),
-			user_badges: badges,
-			message: randomMessage(),
-			emotes: [],
-			raw_data: {
-				raw_message: randomMessage(),
-				raw_emotes: ""
-			},
-			tags: []
+	const platform = randomPlatform();
+
+	switch (platform) {
+		case "twitch": {
+			return {
+				platform: "twitch",
+				message: {
+					id: randomIds(),
+					timestamp: Date.now(),
+					display_name: randomUsername(),
+					user_color: randomColorHex(),
+					user_badges: badges,
+					message: randomMessage(),
+					emotes: [],
+					raw_data: {
+						raw_message: randomMessage(),
+						raw_emotes: ""
+					},
+					tags: []
+				}
+			};
 		}
-	};
+		case "youtube": {
+			return {
+				platform: "youtube",
+				message: {
+					id: randomIds(),
+					author_id: randomIds(),
+					author_name: randomUsername(),
+					author_badges: badges,
+					message: randomMessage(),
+					message_emotes: [],
+					timestamp: new Date().toISOString(),
+					tracking_params: ""
+				}
+			};
+		}
+	}
 }

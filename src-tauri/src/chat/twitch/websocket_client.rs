@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
 use crate::chat::twitch::helpers::message_processor::message_processor;
 use crate::chat::websocket::ws_server::WebSocketServer;
@@ -8,6 +9,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 use tokio_tungstenite::connect_async;
+use crate::chat::websocket::start_ws::initialize_websocket_server;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct RawTwitchResponse {
@@ -31,7 +33,7 @@ struct TwitchResponse {
 #[derive(Default)]
 pub(crate) struct TwitchWebsocketChat {
     pub(crate) ws_stream_initialized: Arc<Mutex<bool>>,
-    pub(crate) stop_flag: Arc<AtomicBool>, // Added AtomicBool
+    pub(crate) stop_flag: Arc<AtomicBool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -40,6 +42,7 @@ pub(crate) enum UserInformationState {
     Regular(Arc<UserInformation>),
 }
 
+// Command to create and start the WebSocket server
 #[tauri::command]
 pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
@@ -48,9 +51,8 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
     {
         let mut ws_initialized = websocket_connection.lock().await;
         if *ws_initialized {
-            return;
+            return; // WebSocket already initialized
         }
-
         *ws_initialized = true;
     }
 
@@ -67,19 +69,7 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
         }
     };
 
-    let ws_server = Arc::new(WebSocketServer::new());
-
-    let ws_server_clone = Arc::clone(&ws_server);
-
-    tokio::spawn(async move {
-        if let Err(e) = ws_server_clone.run("127.0.0.1:9888").await {
-            eprintln!("WebSocket server error: {}", e);
-        } else {
-            println!("WebSocket server started successfully");
-        }
-    });
-
-    app.manage(ws_server.clone());
+    let ws_server = initialize_websocket_server(app.clone()).await;
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
@@ -87,40 +77,69 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
 
     ws_stream.send("NICK justinfan1234".into()).await.unwrap();
 
-    while let Some(msg) = ws_stream.next().await {
-        let msg = msg.unwrap();
-
+    loop {
+        // Check if stop flag has been set
         if stop_flag.load(Ordering::Relaxed) {
+            println!("Stopping WebSocket connection...");
+
             break;
         }
 
-        if msg.to_string().contains("PING") {
-            ws_stream.send("PONG :tmi.twitch.tv".into()).await.unwrap();
-        } else if msg.to_string().contains("Welcome, GLHF!") {
-            ws_stream.send("CAP REQ :twitch.tv/tags".into()).await.unwrap();
-
-            match &user_information {
-                UserInformationState::Skipped(user) => {
-                    let username = user.username.clone();
-                    ws_stream.send(format!("JOIN #{}", username).into()).await.unwrap();
+        // Poll with timeout to prevent waiting indefinitely for messages
+        let message_future = ws_stream.next();
+        tokio::select! {
+            maybe_msg = message_future => {
+                if let Some(Ok(msg)) = maybe_msg {
+                    if msg.to_string().contains("PING") {
+                        ws_stream.send("PONG :tmi.twitch.tv".into()).await.unwrap();
+                    } else if msg.to_string().contains("Welcome, GLHF!") {
+                        ws_stream.send("CAP REQ :twitch.tv/tags".into()).await.unwrap();
+                        match &user_information {
+                            UserInformationState::Skipped(user) => {
+                                let username = user.username.clone();
+                                ws_stream.send(format!("JOIN #{}", username).into()).await.unwrap();
+                            }
+                            UserInformationState::Regular(user_info) => {
+                                ws_stream.send(format!("JOIN #{}", user_info.login).into()).await.unwrap();
+                            }
+                        }
+                    } else if msg.to_string().contains("PRIVMSG") {
+                        message_processor(msg.to_string(), ws_server.clone().deref(), state.clone(), user_information.clone()).await;
+                    }
+                } else {
+                    // Handle disconnection or error
+                    println!("Disconnected from WebSocket server.");
+                    break;
                 }
-                UserInformationState::Regular(user_info) => {
-                    ws_stream.send(format!("JOIN #{}", user_info.login).into()).await.unwrap();
+            },
+            // If the stop flag is set during the message wait, break out of the loop immediately
+            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
+                if stop_flag.load(Ordering::Relaxed) {
+                    break;
                 }
             }
-        } else if msg.to_string().contains("PRIVMSG") {
-            message_processor(msg.to_string(), ws_server.clone(), state.clone(), user_information.clone()).await;
         }
     }
 
+    // Close WebSocket connection
     ws_stream.send("QUIT".into()).await.unwrap();
     ws_server.close().await;
     *websocket_connection.lock().await = false;
     stop_flag.store(false, Ordering::Relaxed);
 }
 
+// Command to stop the WebSocket server and connection
 #[tauri::command]
 pub(crate) async fn stop_connections(app: AppHandle) {
     let stop_flag = Arc::clone(&app.state::<TwitchWebsocketChat>().stop_flag);
-    stop_flag.store(true, Ordering::Relaxed); // Set the stop flag to true
+    stop_flag.store(true, Ordering::Relaxed); // Stop the connection immediately
+
+    // Ensure WebSocket server is stopped
+    let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
+    {
+        let mut ws_initialized = websocket_connection.lock().await;
+        if *ws_initialized {
+            *ws_initialized = false;
+        }
+    }
 }
