@@ -9,5 +9,5 @@ pub(crate) struct YoutubeResponse {
     pub(crate) message: String,
     pub(crate) message_emotes: Vec<(String, String)>,
     pub(crate) timestamp: String,
-    pub(crate) tracking_params: String
+    pub(crate) tracking_params: String,
 }

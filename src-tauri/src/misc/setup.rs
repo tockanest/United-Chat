@@ -1,4 +1,5 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
+use crate::chat::youtube::state_manager::get_all_videos;
 use crate::misc::editor::get_theme::get_themes;
 use keyring::Entry;
 use serde_json::json;
@@ -8,7 +9,6 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
-use crate::chat::youtube::state_manager::get_all_videos;
 
 pub(crate) struct SetupState {
     pub(crate) frontend_task: bool,
@@ -55,7 +55,7 @@ async fn backend_setup(app: AppHandle) {
 
             let path = dirs::config_dir().unwrap().join("United Chat");
             if !path.exists() {
-                std::fs::create_dir_all(&path).expect("Failed to create directory");
+                fs::create_dir_all(&path).expect("Failed to create directory");
             }
 
             let user_file = path.join("twitch-auth.json");

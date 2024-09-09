@@ -130,7 +130,7 @@ pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, St
             let theme_state = state.deref();
 
             let theme = theme_state.themes.iter().find(|(name, _, _)| name == &theme);
-
+            println!("{:?}", theme);
             match theme {
                 Some((_, html_path, css_path)) => {
                     let html_code = std::fs::read_to_string(html_path).unwrap();

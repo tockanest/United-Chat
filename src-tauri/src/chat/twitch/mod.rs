@@ -1,5 +1,5 @@
 #[macro_use]
-pub(crate) mod websocket_client;
+pub(crate) mod irc;
 
 #[macro_use]
 pub(crate) mod auth;

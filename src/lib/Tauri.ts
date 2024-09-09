@@ -70,8 +70,16 @@ export default class TauriApi {
 	 * Connects to the Twitch WebSocket by invoking the `connect_twitch_websocket` command.
 	 * @returns {Promise<void>} A promise that resolves when the connection is established.
 	 */
-	public static async ConnectTwitchWebsocket(): Promise<void> {
-		return await this.command<void>("connect_twitch_websocket", {});
+	public static async StartUnitedChat(
+		yt_id?: string,
+		interval?: number,
+	): Promise<void> {
+		return await this.command<void>("united_chat_init", {
+			youtube: {
+				yt_id,
+				interval
+			}
+		});
 	}
 
 	/**
@@ -79,7 +87,7 @@ export default class TauriApi {
 	 * @returns {Promise<void>} A promise that resolves when the disconnection is complete.
 	 */
 	public static async DisconnectTwitchWebsocket(): Promise<void> {
-		return await this.command<void>("stop_connections", {});
+		return await this.command<void>("united_chat_stop", {});
 	}
 
 	/**
@@ -231,8 +239,8 @@ export default class TauriApi {
 		return await this.command<boolean>("delete_video_from_db", {id: videoId});
 	}
 
-	public static async StartYoutubePolling(video: Video, interval: number) {
-		return await this.command<boolean>("youtube_polling_cmd", {liveId: video.video_id, interval});
+	public static async StartLinkingAIS() {
+		return await this.command<void>("twitch_linking", {});
 	}
 
 	/**

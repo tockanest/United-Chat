@@ -1,15 +1,13 @@
-use std::ops::Deref;
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
 use crate::chat::twitch::helpers::message_processor::message_processor;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
-use tokio::sync::Mutex;
 use tokio_tungstenite::connect_async;
-use crate::chat::websocket::start_ws::initialize_websocket_server;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct RawTwitchResponse {
@@ -30,12 +28,6 @@ struct TwitchResponse {
     tags: Vec<(String, String)>,
 }
 
-#[derive(Default)]
-pub(crate) struct TwitchWebsocketChat {
-    pub(crate) ws_stream_initialized: Arc<Mutex<bool>>,
-    pub(crate) stop_flag: Arc<AtomicBool>,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) enum UserInformationState {
     Skipped(Arc<UserSkippedInformation>),
@@ -43,19 +35,7 @@ pub(crate) enum UserInformationState {
 }
 
 // Command to create and start the WebSocket server
-#[tauri::command]
-pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
-    let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
-    let stop_flag = Arc::clone(&app.state::<TwitchWebsocketChat>().stop_flag);
-
-    {
-        let mut ws_initialized = websocket_connection.lock().await;
-        if *ws_initialized {
-            return; // WebSocket already initialized
-        }
-        *ws_initialized = true;
-    }
-
+pub(crate) async fn connect_twitch_websocket(app: AppHandle, stop_flag: Arc<AtomicBool>, ws_server: Arc<WebSocketServer>) {
     let state = app.state::<ImplicitGrantFlow>();
 
     let user_information = match state.skipped {
@@ -68,8 +48,6 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
             UserInformationState::Regular(regular_state)
         }
     };
-
-    let ws_server = initialize_websocket_server(app.clone()).await;
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
@@ -123,23 +101,4 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle) {
 
     // Close WebSocket connection
     ws_stream.send("QUIT".into()).await.unwrap();
-    ws_server.close().await;
-    *websocket_connection.lock().await = false;
-    stop_flag.store(false, Ordering::Relaxed);
-}
-
-// Command to stop the WebSocket server and connection
-#[tauri::command]
-pub(crate) async fn stop_connections(app: AppHandle) {
-    let stop_flag = Arc::clone(&app.state::<TwitchWebsocketChat>().stop_flag);
-    stop_flag.store(true, Ordering::Relaxed); // Stop the connection immediately
-
-    // Ensure WebSocket server is stopped
-    let websocket_connection = Arc::clone(&app.state::<TwitchWebsocketChat>().ws_stream_initialized);
-    {
-        let mut ws_initialized = websocket_connection.lock().await;
-        if *ws_initialized {
-            *ws_initialized = false;
-        }
-    }
 }

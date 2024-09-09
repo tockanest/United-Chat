@@ -18,6 +18,24 @@ function returnAllBadges(badges: string[]) {
 	}).join(" ");
 }
 
+function formatYoutubeMessage(message: YoutubeResponse) {
+	// Check if there's images in the message (usually emotes) and replace them with the correct styling (flex flex-row items-start)
+	// Images will be already on  the format: <img id=\"{}\" src=\"{}\" alt=\"{}\" />", emoji_name, emoji_url, emoji_name
+	// So we'll split all emojis by the closing tag, set the correct styling and join them back together
+	const splitMessage = message.message.split("</img>");
+	const formattedMessage = splitMessage.map((msg) => {
+		if (msg.includes("<img")) {
+			return `<div class=''>${msg}</div>`;
+		}
+		return msg;
+	}).join("</img>");
+
+	// Replace all missing spaces
+	const replacedSpaces = formattedMessage.replaceAll("{\" \"}", "");
+
+	return replacedSpaces;
+}
+
 function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
 	switch (platform) {
 		case "twitch": {
@@ -25,7 +43,7 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 			return template
 				.replaceAll("{id}", message.id)
 				.replaceAll("{user}", message.display_name)
-				.replaceAll("{formatedMessage}", message.message.substring(0, 100))
+				.replaceAll("{formatedMessage}", message.message)
 				.replaceAll("{raw_message}", message.raw_data.raw_message)
 				.replaceAll("{color}", message.user_color || "")
 				.replaceAll("{profile_picture}", "")
@@ -41,7 +59,7 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 			return template
 				.replaceAll("{id}", message.id)
 				.replaceAll("{user}", message.author_name)
-				.replaceAll("{formatedMessage}", message.message.substring(0, 100))
+				.replaceAll("{formatedMessage}", message.message)
 				.replaceAll("{raw_message}", message.message)
 				.replaceAll("{color}", "")
 				.replaceAll("{profile_picture}", "")
@@ -117,7 +135,7 @@ function handleWebChatWindow(
 		const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&css=${base64CssCode}&${configString}`;
 
 		const port = process.env.NODE_ENV === "production" ? "9889" : "3000";
-		const fullUrl = `http://localhost:${port}/${url}`;
+		const fullUrl = `http://127.0.0.1:${port}/${url}`;
 		setDialogMessage(fullUrl);
 		setShowConfirmDialog(true);
 

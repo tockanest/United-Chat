@@ -37,26 +37,30 @@ impl WebSocketServer {
                     println!("Accepted connection from {}", addr);
                     let addr_str = addr.to_string();
                     let mut client_addresses = self.client_addresses.lock().await;
+
                     if client_addresses.contains(&addr_str) {
                         eprintln!("Client already connected: {}", addr_str);
                         continue;
                     }
+
                     client_addresses.insert(addr_str.clone());
 
-                    let ws_stream = accept_async(stream).await?;
-                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-                    self.clients.lock().await.push(tx);
+                    // Attempt to accept the WebSocket connection
+                    match accept_async(stream).await {
+                        Ok(ws_stream) => {
+                            let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                            self.clients.lock().await.push(tx);
 
-                    let clients = Arc::clone(&self.clients);
-                    let client_addresses = Arc::clone(&self.client_addresses);
-                    tokio::spawn(Self::handle_connection(
-                        ws_stream,
-                        rx,
-                        clients,
-                        client_addresses,
-                        addr_str,
-                        shutdown_receiver.clone(), // Pass the shutdown receiver
-                    ));
+                            let clients = Arc::clone(&self.clients);
+                            let client_addresses = Arc::clone(&self.client_addresses);
+                            tokio::spawn(Self::handle_connection(ws_stream, rx, clients, client_addresses, addr_str, shutdown_receiver.clone()));
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to accept WebSocket connection: {}", e);
+                            let mut client_addresses = self.client_addresses.lock().await;
+                            client_addresses.remove(&addr_str);
+                        }
+                    }
                 },
                 _ = shutdown_receiver.changed() => {
                     println!("Shutting down the WebSocket server...");
@@ -64,6 +68,7 @@ impl WebSocketServer {
                 }
             }
         }
+
         Ok(())
     }
 
@@ -73,7 +78,7 @@ impl WebSocketServer {
         clients: Arc<Mutex<Vec<Tx>>>,
         client_addresses: Arc<Mutex<HashSet<String>>>,
         addr_str: String,
-        mut shutdown_signal: watch::Receiver<()>, // Added shutdown signal receiver
+        mut shutdown_signal: watch::Receiver<()>
     ) {
         loop {
             tokio::select! {
@@ -83,13 +88,13 @@ impl WebSocketServer {
                             break;
                         }
                     }
-                }
+                },
                 Some(msg) = rx.recv() => {
                     if let Err(e) = ws_stream.send(msg).await {
                         eprintln!("Error sending message: {}", e);
                         break;
                     }
-                }
+                },
                 _ = shutdown_signal.changed() => {
                     println!("Shutting down connection for {}", addr_str);
                     let _ = ws_stream.close(None).await; // Close the WebSocket connection

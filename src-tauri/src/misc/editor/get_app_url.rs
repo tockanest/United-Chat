@@ -10,7 +10,7 @@ pub(crate) fn open_webchat_window(url: String, app: AppHandle) {
 
 #[tauri::command]
 pub(crate) fn hide_webchat_window(app: AppHandle) {
-    let mut webchat = app.get_webview_window("webchat").unwrap();
+    let webchat = app.get_webview_window("webchat").unwrap();
     // Hide the webchat window
     webchat.hide().unwrap();
 }

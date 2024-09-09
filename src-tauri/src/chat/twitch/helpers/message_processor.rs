@@ -1,12 +1,11 @@
 use crate::chat::twitch::auth::ImplicitGrantFlow;
 use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
-use crate::chat::twitch::websocket_client::UserInformationState;
+use crate::chat::twitch::irc::UserInformationState;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::Arc;
 use tauri::State;
 use tokio_tungstenite::tungstenite::Message;
 

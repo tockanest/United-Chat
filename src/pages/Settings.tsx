@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react'
+import React, {Dispatch, SetStateAction, useEffect, useState} from 'react'
 import {Button} from "@/components/ui/button"
 import {Checkbox} from "@/components/ui/checkbox"
 import {Input} from "@/components/ui/input"
@@ -8,7 +8,7 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/c
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog"
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
-import {Edit, RefreshCw, Trash2, Twitch, Youtube} from "lucide-react"
+import {ChevronLeft, Edit, RefreshCw, Trash2, Twitch, Youtube} from "lucide-react"
 import {useToast} from "@/hooks/use-toast"
 import {Toaster} from "@/components/ui/toaster"
 import TauriApi from "@/lib/Tauri"
@@ -37,7 +37,15 @@ type ChatTheme = {
 	preview: string
 }
 
-export default function AppSettings() {
+export default function AppSettings(
+	{
+		setPage,
+		user
+	}: {
+		setPage: Dispatch<SetStateAction<string>>
+		user: UserInformation | null
+	}
+) {
 	const {toast} = useToast()
 	const [liveStreams, setLiveStreams] = useState<LiveStream[]>([])
 	const [selectedStreams, setSelectedStreams] = useState<string[]>([])
@@ -58,6 +66,8 @@ export default function AppSettings() {
 
 	const [youtubeConnected, setYoutubeConnected] = useState(false)
 	const [twitchConnected, setTwitchConnected] = useState(false)
+	const [startLinkingAlert, setStartLinkingAlert] = useState(false)
+	const [logoutAlert, setLogoutAlert] = useState(false)
 
 	const handleSelectAll = () => {
 		if (selectedStreams.length === liveStreams.length) {
@@ -193,14 +203,77 @@ export default function AppSettings() {
 		}
 
 		fetchLiveStreams()
+
+		if (user) {
+			setTwitchConnected(true)
+		}
 	}, [])
 
 	return (
 		<div className="container mx-auto p-4">
-			<h1 className="text-2xl font-bold mb-4">App Settings</h1>
-
+			<AlertDialog open={startLinkingAlert} onOpenChange={setStartLinkingAlert}>
+				<AlertDialogContent className="sm:max-w-[425px]">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="text-2xl">
+							Link Twitch Account
+						</AlertDialogTitle>
+						<AlertDialogDescription className="text-center">
+							To link your Twitch account, the app will close this window and go back to the splashscreen
+							to connect to Twitch.<br/>
+							Are you sure you want to continue?<br/><br/>
+							Any unsaved changes will be lost!
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => {
+							setStartLinkingAlert(false)
+						}}>
+							Close
+						</AlertDialogAction>
+						<AlertDialogAction onClick={() => {
+							window.localStorage.setItem("twitch_linked", "false")
+							TauriApi.StartLinkingAIS();
+						}}>
+							Open
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+			<AlertDialog open={logoutAlert} onOpenChange={setLogoutAlert}>
+				<AlertDialogContent className="sm:max-w-[425px]">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="text-2xl">
+							Unlink Twitch Account
+						</AlertDialogTitle>
+						<AlertDialogDescription className="text-center">
+							Are you sure you want to unlink your Twitch account?<br/>
+							You will either need to log in again or use the app without a linked Twitch
+							account.<br/><br/>
+							Any unsaved changes will be lost, but everything else will be saved.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => {
+							setStartLinkingAlert(false)
+						}}>
+							Close
+						</AlertDialogAction>
+						<AlertDialogAction onClick={() => {
+							window.localStorage.setItem("twitch_linked", "false")
+							TauriApi.Logout();
+						}}>
+							Open
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<Tabs defaultValue="functionality" className="w-full">
 				<TabsList>
+					<Button variant={"link"} onClick={() => {
+						setPage('editor')
+					}}>
+						<ChevronLeft className="h-4 w-4 mr-2"/>
+					</Button>
 					<TabsTrigger value="functionality">Functionality Settings</TabsTrigger>
 					<TabsTrigger value="ui">UI Settings</TabsTrigger>
 				</TabsList>
@@ -285,14 +358,16 @@ export default function AppSettings() {
 											<TableCell>{stream.name}</TableCell>
 											<TableCell>{stream.scheduledTime || 'Not scheduled'}</TableCell>
 											<TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold
-                          ${stream.status === 'live' ? 'bg-green-100 text-green-800' :
-	                        stream.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-		                        stream.status === 'offline' ? 'bg-yellow-100 text-red-500' : 'bg-gray-100 text-gray-800'
-                        }`}
-                        >
-                          {stream.status.charAt(0).toUpperCase() + stream.status.slice(1)}
-                        </span>
+					                        <span className={`px-2 py-1 rounded-full text-xs font-semibold
+					                            ${
+						                        stream.status === 'live' ? 'bg-green-100 text-green-800' :
+							                        stream.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+								                        stream.status === 'offline' ? 'bg-yellow-100 text-red-500' : 'bg-gray-100 text-gray-800'
+					                        }
+				                            `}
+					                        >
+					                          {stream.status.charAt(0).toUpperCase() + stream.status.slice(1)}
+					                        </span>
 											</TableCell>
 											<TableCell className="text-right">
 												<Button variant="ghost" size="icon" className="mr-2">
@@ -332,7 +407,16 @@ export default function AppSettings() {
 									<Twitch className="mr-2 h-6 w-6"/>
 									<span>Twitch</span>
 								</div>
-								<Button onClick={() => setTwitchConnected(!twitchConnected)}>
+								<Button onClick={() => {
+									if (!user) {
+										// 	Show the user that the app is going back to the splashscreen to connect to Twitch
+										setStartLinkingAlert(true)
+									} else {
+										// 	Logout the user
+										// 	Show the user that the app is going back to the splashscreen to connect to Twitch
+										setLogoutAlert(true)
+									}
+								}}>
 									{twitchConnected ? 'Disconnect' : 'Connect'}
 								</Button>
 							</div>
@@ -374,7 +458,14 @@ export default function AppSettings() {
 							<CardDescription>Choose a theme for the app interface</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<Select value={appTheme} onValueChange={setAppTheme}>
+							<Select
+								value={appTheme}
+								onValueChange={(value) => {
+									setAppTheme(value);
+									document.documentElement.setAttribute("data-theme", value);
+									window.localStorage.setItem('theme', value);
+								}}
+							>
 								<SelectTrigger className="w-[180px]">
 									<SelectValue placeholder="Select a theme"/>
 								</SelectTrigger>

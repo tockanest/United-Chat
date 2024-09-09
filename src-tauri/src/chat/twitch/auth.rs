@@ -5,7 +5,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindowBuilder};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub(crate) struct ImplicitGrantFlow {
     pub(crate) access_token: String,
     pub(crate) scope: String,
@@ -16,7 +16,7 @@ pub(crate) struct ImplicitGrantFlow {
     pub(crate) skipped: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub(crate) struct UserInformation {
     pub(crate) login: String,
     pub(crate) user_id: String,
@@ -30,7 +30,7 @@ pub(crate) struct UserSkippedInformation {
     pub(crate) username: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 struct InternalUserInformation {
     pub broadcaster_type: String,
     pub description: String,
@@ -274,7 +274,15 @@ pub(crate) async fn twitch_deauth(app: AppHandle) -> bool {
     let entry = Entry::new("united-chat", "twitch-auth")
         .unwrap_or_else(|e| panic!("Error: {}", e));
 
-    entry.delete_credential().unwrap();
+    match entry.delete_credential() {
+        Ok(_) => {
+            app.manage(UserInformation::default());
+            app.manage(ImplicitGrantFlow::default());
+        }
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
 
     let path = dirs::config_dir().unwrap().join("United Chat");
     if !path.exists() {

@@ -59,6 +59,7 @@ export default function EditorHeader(
 	}, [])
 
 	useEffect(() => {
+		console.log(theme)
 		TauriApi.GetEditorTheme(theme).then((result) => {
 			if (result) {
 				localStorage.setItem("chatTheme", theme)

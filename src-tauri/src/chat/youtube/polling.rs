@@ -1,14 +1,11 @@
-use crate::chat::twitch::websocket_client::TwitchWebsocketChat;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use crate::chat::youtube::structs::youtube_response::YoutubeResponse;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
-use std::ops::Deref;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager};
+use tauri::Manager;
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,7 +194,7 @@ fn parse_message_type(data: &Vec<Value>) -> Result<Vec<YoutubeResponse>, ()> {
                             .and_then(|l| l.as_str())
                             .unwrap_or("Unknown Emoji");
 
-                        Some(format!("<img id=\"{}\" src=\"{}\" alt=\"{}\" />", emoji_name, emoji_url, emoji_name))
+                        Some(format!("<img id=\"{}\" class=\"w-6 h-6\" src=\"{}\" alt=\"{}\" />", emoji_name, emoji_url, emoji_name))
                     } else {
                         None
                     }
@@ -310,53 +307,61 @@ struct PreviousMessages {
     message_ids: VecDeque<String>,
 }
 
-#[tauri::command]
-pub(crate) async fn youtube_polling_cmd(interval: u64, live_id: String, app: AppHandle) {
+pub(crate) async fn youtube_polling_cmd(
+    interval: u64,
+    live_id: String,
+    stop_flag: Arc<AtomicBool>,
+    ws_server: Arc<WebSocketServer>,
+) {
     let video = get_video(live_id).await.unwrap();
-
-    let state = app.state::<Arc<WebSocketServer>>();
-    let ws_server = state.deref();
-
-    let twitch_state = app.state::<TwitchWebsocketChat>();
-    let cancel_flag = Arc::clone(&twitch_state.stop_flag);
-
+    println!("Starting YouTube live chat client");
     let mut previous_messages = PreviousMessages {
         message_ids: VecDeque::new(),
     };
 
+    let polling_interval = tokio::time::Duration::from_millis(interval);
+
     loop {
-        if cancel_flag.load(std::sync::atomic::Ordering::Relaxed) {
-            println!("Stopping YouTube polling...");
-            break;
-        }
-
-        tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
-        let polling = get_live_chat(video.clone()).await.unwrap();
-        let mut data = polling.0;
-
-        // Limit data to the latest 20 messages
-        if data.len() > MAX_PREVIOUS_MESSAGES {
-            data = data.split_off(data.len() - MAX_PREVIOUS_MESSAGES);
-        }
-
-        for message in data {
-            if !previous_messages.message_ids.contains(&message.id) {
-                let ws_response = json!({
-                    "platform": "youtube",
-                    "data": message
-                });
-
-                ws_server.broadcast(
-                    Message::Text(serde_json::to_string(&ws_response).unwrap())
-                ).await;
-
-                // Add the new message ID
-                previous_messages.message_ids.push_back(message.id);
-
-                // Purge old messages if the size exceeds the limit
-                if previous_messages.message_ids.len() > MAX_PREVIOUS_MESSAGES {
-                    previous_messages.message_ids.pop_front();
+        tokio::select! {
+            _ = tokio::time::sleep(polling_interval) => {
+                if stop_flag.load(Ordering::Relaxed) {
+                    break;
                 }
+            }
+        }
+        // Call get_live_chat
+        match get_live_chat(video.clone()).await {
+            Ok(polling) => {
+                let mut data = polling.0;
+
+                // Limit data to the latest 20 messages
+                if data.len() > MAX_PREVIOUS_MESSAGES {
+                    data = data.split_off(data.len() - MAX_PREVIOUS_MESSAGES);
+                }
+
+                // Process the messages
+                for message in data {
+                    if !previous_messages.message_ids.contains(&message.id) {
+                        let ws_response = json!({
+                                    "platform": "youtube",
+                                    "data": message
+                                });
+                        ws_server
+                            .broadcast(Message::Text(serde_json::to_string(&ws_response).unwrap()))
+                            .await;
+
+                        // Add the new message ID to previous messages
+                        previous_messages.message_ids.push_back(message.id);
+
+                        // Purge old messages if the size exceeds the limit
+                        if previous_messages.message_ids.len() > MAX_PREVIOUS_MESSAGES {
+                            previous_messages.message_ids.pop_front();
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Error polling YouTube live chat: {:?}", e);
             }
         }
     }

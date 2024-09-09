@@ -3,9 +3,6 @@ import {useRouter} from "next/router";
 import moment from "moment";
 import {replacePlaceholders} from "@/components/component/Main/Helpers/webChatUtils";
 
-// I MADE THIS WORK!! I'M SO HAPPY THAT I COULD ACTUALLY KISS SOMEONE
-// unfortunately, I'm alone in my room, so I'll just kiss my dog instead
-
 export default function WebChat() {
 	const router = useRouter();
 	const {
@@ -33,8 +30,6 @@ export default function WebChat() {
 	const scalingEnabled = scaling === "true"; // Determine if scaling is enabled
 	const scalingFactor = Number(scalingValue)
 
-	const debug = isDebug === "true"; // Determine if debug mode is enabled
-
 	const [messages, setMessages] = useState<Message[]>([]);
 
 	const fadeQueueRef = useRef<Set<string>>(new Set()); // Cache for fade-out messages
@@ -44,7 +39,6 @@ export default function WebChat() {
 	const processFadeOutQueue = useCallback(async () => {
 		// Remove expired messages immediately if queue length exceeds 15
 		if (fadeQueueRef.current.size > messagesLimit) {
-			console.info("Queue length exceeded 15, removing expired messages immediately");
 			const now = moment();
 			fadeQueueRef.current.forEach(id => {
 				const message = messages.find(msg => msg.message.id === id);
@@ -54,7 +48,6 @@ export default function WebChat() {
 				}
 			});
 		}
-
 		// @ts-ignore: Process fading out for messages in the queue
 		for (const id of fadeQueueRef.current) {
 			if (!fadeOutEnabled) continue; // Skip if fade-out is disabled
@@ -85,7 +78,6 @@ export default function WebChat() {
 		}
 	}, [messages]);
 
-
 	useEffect(() => {
 		if (messagesToRemove.size > 0) {
 			setMessages(prevMessages => prevMessages.filter(msg => !messagesToRemove.has(msg.message.id)));
@@ -95,10 +87,7 @@ export default function WebChat() {
 	}, [messagesToRemove]);
 
 	useEffect(() => {
-		if (debug) {
-			console.debug("Debug mode enabled, skipping message cleanup");
-			return;
-		}
+
 		const cleanupInterval = setInterval(() => {
 			const now = moment();
 
@@ -111,12 +100,12 @@ export default function WebChat() {
 						return !shouldBeRemoved; // Keep message if it shouldn't be removed yet
 					} else if (fadeOutEnabled) {
 						let messageTime: moment.Moment | null = null;
-						if(msg.platform === "twitch") {
+						if (msg.platform === "twitch") {
 							messageTime = moment(msg.message.timestamp);
-						} else if(msg.platform === "youtube") {
+						} else if (msg.platform === "youtube") {
 							// Youtube uses uSec timestamp and this might cause the message to not be displayed for long enough
 							// Adding 5 seconds to the timestamp to make sure the message is displayed for at least 5 seconds
-							messageTime = moment(Number(msg.message.timestamp) / 1000 + 15000);
+							messageTime = moment(Number(msg.message.timestamp) / 1000);
 						}
 						const shouldFadeOut = now.diff(messageTime, 'seconds') >= removalTimeSeconds;
 
@@ -139,7 +128,6 @@ export default function WebChat() {
 	useEffect(() => {
 		// Check if total messages exceed 15 and remove the oldest if necessary
 		if (messages.length > messagesLimit) {
-			console.log("Total messages exceeded 15, removing the oldest message immediately");
 			const oldestMessageId = messages[0].message.id; // Assuming messages are ordered by timestamp
 			setMessages(prevMessages => prevMessages.slice(1)); // Remove the oldest message
 			fadeQueueRef.current.delete(oldestMessageId); // Also remove from fade queue if present
@@ -150,7 +138,7 @@ export default function WebChat() {
 		const ws = new WebSocket('ws://localhost:9888');
 
 		ws.onopen = () => {
-			console.info('WebSocket connection established');
+			console.log('WebSocket connection established');
 		};
 
 		ws.onmessage = (event) => {
@@ -161,14 +149,15 @@ export default function WebChat() {
 					...data.data
 				}
 			};
-			console.log(newMessage);
+
 			setMessages(prevMessages => [...prevMessages, newMessage as Message]);
 		};
 
 		ws.onclose = () => {
-			console.info('WebSocket connection closed, closing window');
-			window.close();
+			console.log('WebSocket connection closing');
 		};
+
+		document.body.style.backgroundColor = 'transparent';
 
 		return () => {
 			ws.close();
@@ -178,11 +167,11 @@ export default function WebChat() {
 	return (
 		<div
 			className={`
+				bg-transparent
 				flex flex-col
-				${width ? `w-${width}` : ''}
-				${height ? `h-${height}` : ''}
-				${maxHeight ? `max-h-${divMaxHeight}` : ''}
-				${maxWidth ? `max-w-${divMaxWidth}` : ''}
+				
+							${maxHeight ? `max-h-[${divMaxHeight}px]` : ''}
+							${maxWidth ? `max-w-[${divMaxWidth}px]` : ''}
 			`}
 			{
 				...scalingEnabled && scalingFactor ? {
@@ -192,6 +181,7 @@ export default function WebChat() {
 				} : {}
 			}
 		>
+			<script src="/styles/tailwind_complete.css"></script>
 			<style>
 				{`
                 .fade-out {
@@ -200,26 +190,21 @@ export default function WebChat() {
                 }
             `}
 			</style>
-			<script src="/styles/tailwind_complete.css" data-tailwind="disable-warning"></script>
-			{messages.map((msg, index) => (
-				<div
-					key={index}
-					className={
-						`
+			<div className="bg-transparent">
+				{messages.map((msg, index) => (
+					<div
+						key={index}
+						className={
+							`
 							message 
 							${msg.fullyFadedOut ? 'fade-out' : ''}
 							flex items-start
-							${width ? `w-${width}` : ''}
-							${height ? `h-${height}` : ''}
-							${maxHeight ? `max-h-${divMaxHeight}` : ''}
-							${maxWidth ? `max-w-${divMaxWidth}` : ''}
 						`
-					}
-
-					dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}>
-
-				</div>
-			))}
+						}
+						dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}>
+					</div>
+				))}
+			</div>
 		</div>
 	);
 }

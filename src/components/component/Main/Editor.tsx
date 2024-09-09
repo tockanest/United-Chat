@@ -155,22 +155,26 @@ export default function Editor(
 			}
 		} else {
 			const startEverything = async () => {
-				TauriApi.ConnectTwitchWebsocket();
+				let yt_info: {
+					yt_id: string,
+					interval: number
+				} | null = null;
+
 				const getYtStreams = await TauriApi.GetAllVideos();
-				console.log(getYtStreams);
 				if (getYtStreams.length > 0) {
 					// Get the first stream that has the live status
 					const liveStream = getYtStreams.find(stream => stream.stream_type === "live");
 
 					if (liveStream) {
-						console.log(liveStream)
-						TauriApi.StartYoutubePolling(liveStream, 1);
-						console.log("Polling started");
+						yt_info = {
+							yt_id: liveStream.video_id,
+							// In milliseconds
+							interval: 2000 // Will change to user-set value instead of fixed value
+						}
 					}
-
-					console.log("No live streams found")
 				}
 
+				await TauriApi.StartUnitedChat(yt_info?.yt_id, yt_info?.interval);
 				console.log("Everything should be started now");
 			}
 

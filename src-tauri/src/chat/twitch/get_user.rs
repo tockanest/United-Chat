@@ -14,7 +14,7 @@ pub(crate) async fn get_user(app: AppHandle) -> Result<UserInformation, String> 
             let user_information = user_state.deref().clone();
             Ok(user_information)
         } else {
-            Err("Setup was skipped, there's no user to be ".into())
+            Err("Setup was skipped, there's no user linked.".into())
         }
     } else {
         Err("Twitch auth not found".into())
