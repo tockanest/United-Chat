@@ -1,5 +1,6 @@
 import TauriApi from "@/lib/Tauri";
 import React from "react";
+import moment from "moment";
 
 function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
 	switch (platform) {
@@ -53,6 +54,7 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 				.replaceAll("{badge_2}", message.user_badges[1] || "")
 				.replaceAll("{badge_3}", message.user_badges[2] || "")
 				.replaceAll("{badges}", returnAllBadges(message.user_badges))
+				.replaceAll("{timestamp}", moment(message.timestamp).format("HH:mm"))
 		}
 		case "youtube": {
 			message = message as YoutubeResponse;
@@ -69,11 +71,13 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 				.replaceAll("{badge_2}", message.author_badges[1] || "")
 				.replaceAll("{badge_3}", message.author_badges[2] || "")
 				.replaceAll("{badges}", returnAllBadges(message.author_badges))
+				.replaceAll("{timestamp}", moment(Number(message.timestamp) / 1000).format("HH:mm"))
+
 		}
 	}
 }
 
-function handleConfigChange(key: keyof ConfigState, value: number | boolean, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {
+function handleConfigChange(key: keyof ConfigState, value: number | boolean | string, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {
 	setConfig(prevConfig => ({...prevConfig, [key]: value}))
 }
 
@@ -119,6 +123,7 @@ function handleWebChatWindow(
 		const currentWidth = config.currentWidth;
 		const currentHeight = config.currentHeight;
 		const maxMessages = config.maxMessages;
+		const messageTransition = config.messageTransition;
 
 		// If any of the boolean values are false, ignore them
 		let configString = "";
@@ -129,8 +134,10 @@ function handleWebChatWindow(
 		configString += `maxWidth=${maxWidth}&maxHeight=${maxHeight}&`;
 		// Add the current width and height
 		configString += `currentWidth=${currentWidth}&currentHeight=${currentHeight}`;
-		// Add the max messages
+		// Add the max messages and removal timer
 		configString += `&maxMessages=${maxMessages}&removalTimer=${messageRemoveTimer}`;
+		// Add the message transition
+		configString += `&messageTransition=${messageTransition}`;
 
 		const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&css=${base64CssCode}&${configString}`;
 

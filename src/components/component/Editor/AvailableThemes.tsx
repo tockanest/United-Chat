@@ -17,10 +17,7 @@ export default function AvailableThemes({format, selectedTheme, setCurrentTheme,
 	const [themes, setThemes] = useState<string[]>([]);
 
 	useEffect(() => {
-		GetThemes().then((r) => {
-			console.log(r)
-			setThemes(r);
-		} );
+		GetThemes().then(setThemes);
 	}, []);
 
 	useEffect(() => {

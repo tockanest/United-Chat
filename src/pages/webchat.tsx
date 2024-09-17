@@ -16,28 +16,28 @@ export default function WebChat() {
 		maxHeight,
 		scaling,
 		scalingValue,
+		messageTransition,
 		isDebug
 	} = router.query;
 
 	const decodedHtmlTemplate = htmlTemplate ? atob(decodeURIComponent(htmlTemplate as string)) : '';
-	const removalTimeSeconds = Number(removalTimer)
-	const fadeOutEnabled = fadeOut === "true"; // Determine if fade-out is enabled
-	const messagesLimit = Number(maxMessages)
-	const width = Number(currentWidth)
-	const height = Number(currentHeight)
-	const divMaxWidth = Number(maxWidth)
-	const divMaxHeight = Number(maxHeight)
-	const scalingEnabled = scaling === "true"; // Determine if scaling is enabled
-	const scalingFactor = Number(scalingValue)
+	const removalTimeSeconds = Number(removalTimer);
+	const fadeOutEnabled = fadeOut === "true";
+	const messagesLimit = Number(maxMessages);
+	const width = Number(currentWidth);
+	const height = Number(currentHeight);
+	const divMaxWidth = Number(maxWidth);
+	const divMaxHeight = Number(maxHeight);
+	const scalingEnabled = scaling === "true";
+	const scalingFactor = Number(scalingValue);
+	const transition = messageTransition as string;
 
 	const [messages, setMessages] = useState<Message[]>([]);
-
-	const fadeQueueRef = useRef<Set<string>>(new Set()); // Cache for fade-out messages
+	const fadeQueueRef = useRef<Set<string>>(new Set());
 	const [messagesToRemove, setMessagesToRemove] = useState<Set<string>>(new Set());
+	const [animationsCss, setAnimationsCss] = useState<string>('');
 
-	// Function to process the fade-out queue
 	const processFadeOutQueue = useCallback(async () => {
-		// Remove expired messages immediately if queue length exceeds 15
 		if (fadeQueueRef.current.size > messagesLimit) {
 			const now = moment();
 			fadeQueueRef.current.forEach(id => {
@@ -48,9 +48,9 @@ export default function WebChat() {
 				}
 			});
 		}
-		// @ts-ignore: Process fading out for messages in the queue
+
 		for (const id of fadeQueueRef.current) {
-			if (!fadeOutEnabled) continue; // Skip if fade-out is disabled
+			if (!fadeOutEnabled) continue;
 			const messageElement = document.getElementById(id);
 
 			if (messageElement) {
@@ -60,7 +60,6 @@ export default function WebChat() {
 					const handleTransitionEnd = () => {
 						messageElement.removeEventListener('transitionend', handleTransitionEnd);
 						resolve();
-						// Mark message as fully faded out
 						setMessages(prevMessages => prevMessages.map(msg =>
 							msg.message.id === id ? {...msg, fullyFadedOut: true} : msg
 						));
@@ -68,55 +67,42 @@ export default function WebChat() {
 					messageElement.addEventListener('transitionend', handleTransitionEnd);
 				});
 
-				// Remove the message after fade-out transition
 				setMessages(prevMessages => prevMessages.filter(msg => msg.message.id !== id));
 				fadeQueueRef.current.delete(id);
 			}
 
-			// Delay before processing the next item
-			await new Promise(resolve => setTimeout(resolve, 2000)); // +2s delay
+			await new Promise(resolve => setTimeout(resolve, 2000));
 		}
-	}, [messages]);
+	}, [messages, fadeOutEnabled, messagesLimit, removalTimeSeconds]);
 
 	useEffect(() => {
 		if (messagesToRemove.size > 0) {
 			setMessages(prevMessages => prevMessages.filter(msg => !messagesToRemove.has(msg.message.id)));
-			// Clear messagesToRemove after updating messages
 			setMessagesToRemove(new Set());
 		}
 	}, [messagesToRemove]);
 
 	useEffect(() => {
-
 		const cleanupInterval = setInterval(() => {
 			const now = moment();
 
 			setMessages(prevMessages => prevMessages.filter(msg => {
-				if (msg.message.timestamp) {
-					if (!fadeOutEnabled) {
-						const messageTime = moment(msg.message.timestamp);
-						const shouldBeRemoved = now.diff(messageTime, 'seconds') >= removalTimeSeconds;
+				if (!msg.message.timestamp) return msg;
 
-						return !shouldBeRemoved; // Keep message if it shouldn't be removed yet
-					} else if (fadeOutEnabled) {
-						let messageTime: moment.Moment | null = null;
-						if (msg.platform === "twitch") {
-							messageTime = moment(msg.message.timestamp);
-						} else if (msg.platform === "youtube") {
-							// Youtube uses uSec timestamp and this might cause the message to not be displayed for long enough
-							// Adding 5 seconds to the timestamp to make sure the message is displayed for at least 5 seconds
-							messageTime = moment(Number(msg.message.timestamp) / 1000);
-						}
-						const shouldFadeOut = now.diff(messageTime, 'seconds') >= removalTimeSeconds;
+				const messageTime = msg.platform === "youtube"
+					? moment(Number(msg.message.timestamp) / 1000)
+					: moment(msg.message.timestamp);
 
-						if (shouldFadeOut && !msg.fadingOut) {
-							fadeQueueRef.current.add(msg.message.id);
-							processFadeOutQueue();
-							return {...msg, fadingOut: true};
-						}
-					}
+				const shouldFadeOut = fadeOutEnabled && now.diff(messageTime, 'seconds') >= removalTimeSeconds;
+
+				if (shouldFadeOut && !msg.fadingOut) {
+					fadeQueueRef.current.add(msg.message.id);
+					processFadeOutQueue();
+					return {...msg, fadingOut: true};
 				}
-				return msg;
+
+				const shouldBeRemoved = !fadeOutEnabled && now.diff(messageTime, 'seconds') >= removalTimeSeconds;
+				return !shouldBeRemoved;
 			}));
 		}, 1000);
 
@@ -126,13 +112,12 @@ export default function WebChat() {
 	}, [fadeOutEnabled, removalTimeSeconds, processFadeOutQueue]);
 
 	useEffect(() => {
-		// Check if total messages exceed 15 and remove the oldest if necessary
 		if (messages.length > messagesLimit) {
-			const oldestMessageId = messages[0].message.id; // Assuming messages are ordered by timestamp
-			setMessages(prevMessages => prevMessages.slice(1)); // Remove the oldest message
-			fadeQueueRef.current.delete(oldestMessageId); // Also remove from fade queue if present
+			const oldestMessageId = messages[0].message.id;
+			setMessages(prevMessages => prevMessages.slice(1));
+			fadeQueueRef.current.delete(oldestMessageId);
 		}
-	}, [messages]); // Run this effect whenever the message array changes
+	}, [messages, messagesLimit]);
 
 	useEffect(() => {
 		const ws = new WebSocket('ws://localhost:9888');
@@ -159,6 +144,10 @@ export default function WebChat() {
 
 		document.body.style.backgroundColor = 'transparent';
 
+		fetch('/styles/webchat_transitions.css')
+			.then(res => res.text())
+			.then(css => setAnimationsCss(css));
+
 		return () => {
 			ws.close();
 		};
@@ -166,43 +155,24 @@ export default function WebChat() {
 
 	return (
 		<div
-			className={`
-				bg-transparent
-				flex flex-col
-				
-							${maxHeight ? `max-h-[${divMaxHeight}px]` : ''}
-							${maxWidth ? `max-w-[${divMaxWidth}px]` : ''}
-			`}
-			{
-				...scalingEnabled && scalingFactor ? {
-					style: {
-						transform: `scale(${scalingFactor})`
-					}
-				} : {}
-			}
+			className={`bg-transparent flex flex-col w-[${width}px] h-[${height}px] max-h-[${divMaxHeight}px] max-w-[${divMaxWidth}px] overflow-y-auto `}
+			{...scalingEnabled && scalingFactor ? {style: {transform: `scale(${scalingFactor})`}} : {}}
 		>
 			<script src="/styles/tailwind_complete.css"></script>
-			<style>
-				{`
-                .fade-out {
-                    opacity: 0;
-                    transition: opacity 3s ease-out;
-                }
-            `}
-			</style>
-			<div className="bg-transparent">
+			<style>{animationsCss}</style>
+			<div
+				id={"message-container"}
+				className="bg-transparent">
 				{messages.map((msg, index) => (
 					<div
 						key={index}
-						className={
-							`
-							message 
-							${msg.fullyFadedOut ? 'fade-out' : ''}
-							flex items-start
-						`
-						}
-						dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}>
-					</div>
+						className={`message ${msg.fullyFadedOut ? 'fade-out' : ''} flex items-start ${
+							transition === 'slide in' ? 'slide-from-right' :
+								transition === 'slide bottom' ? 'slide-from-bottom' :
+									transition === "typewriter" ? "typewriter" : ''
+						}`}
+						dangerouslySetInnerHTML={{__html: replacePlaceholders(decodedHtmlTemplate, msg.message, msg.platform)}}
+					/>
 				))}
 			</div>
 		</div>

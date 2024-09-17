@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::Manager;
+
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -281,22 +281,16 @@ async fn get_live_chat(data: VideoInfo) -> Result<(Vec<YoutubeResponse>, String)
         );
     }
 
-    // Can be either invalidationContinuationData or timedContinuationData
-    let mut continuation_type = String::new();
     match continuation_data[0]["timedContinuationData"].as_object() {
         Some(_) => {
             let timed_continuation = continuation_data[0]["timedContinuationData"]["continuation"].as_str().unwrap();
-            continuation_type = timed_continuation.to_string();
+            Ok((parse_message_type(&action).unwrap(), timed_continuation.to_string()))
         }
         None => {
             let invalidation_continuation = continuation_data[0]["invalidationContinuationData"]["continuation"].as_str().unwrap();
-            continuation_type = invalidation_continuation.to_string();
+            Ok((parse_message_type(&action).unwrap(), invalidation_continuation.to_string()))
         }
     }
-
-    let message = parse_message_type(&action).unwrap();
-
-    Ok((message, continuation_type))
 }
 
 
@@ -380,7 +374,6 @@ pub(crate) async fn get_live_chat_cmd(video: VideoInfo) -> Result<(Vec<YoutubeRe
 
 
 mod test {
-    use super::*;
 
     #[tokio::test]
     async fn test_get_video_cmd() {

@@ -71,15 +71,15 @@ Feel free to dive into the [source code](https://github.com/tockawaffle/United-C
 ## **TODO List** 📝
 
 - [X] Design the UI 🎨
-- [ ] Implement Rust Backend 🔧
+- [X] Implement Rust Backend 🔧
   - [X] Twitch API 🕹️
-  - [ ] YouTube API 🎥
-- [ ] Enhance Message Handling 💬
+  - [X] YouTube API 🎥
+- [X] Enhance Message Handling 💬
   - [X] Twitch
-  - [ ] YouTube
+  - [X] YouTube
 - [ ] Develop User Linking 🔗
   - [X] Twitch (Account Linking)
-  - [ ] Twitch (No Linking)
+  - [X] Twitch (No Linking)
   - [ ] YouTube
 - [X] Build Chat UI 🖥️
 - [ ] Conduct Performance Tests 🏎️
@@ -97,7 +97,7 @@ You have two options:
 2. Use the `.exe` or `.msi` installer for Windows.
 3. Install and run the app.
 4. You can link your Twitch account or use a Twitch streamer URL to start chatting.
-5. Enjoy your Twitch chat in the app! 🎉 (YouTube chat support is coming soon.)
+5. To access the YouTube Chat, you'll have to access the Settings page (CRTL + D) and 
 
 </details>
 

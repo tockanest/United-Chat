@@ -67,6 +67,7 @@ declare global {
 		maxHeight: number
 		currentWidth: number
 		currentHeight: number
+		messageTransition: string
 	}
 
 	type AvailableThemes = [string, string, string][];
@@ -85,6 +86,20 @@ declare global {
 	type VideoError = {
 		video_id: string,
 		error: string
+	}
+
+	type LiveStream = {
+		id: string
+		name: string
+		scheduledTime: string | null
+		status: 'live' | 'scheduled' | 'offline'
+	}
+
+	type ChatTheme = {
+		id: string
+		name: string
+		html: string
+		css: string
 	}
 
 }

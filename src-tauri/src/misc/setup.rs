@@ -1,6 +1,7 @@
 use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
 use crate::chat::youtube::state_manager::get_all_videos;
 use crate::misc::editor::get_theme::get_themes;
+use crate::misc::editor::save_theme::ThemeState;
 use keyring::Entry;
 use serde_json::json;
 use sled::Db;
@@ -36,6 +37,8 @@ pub(crate) fn initialize_database() -> Arc<Db> {
 }
 
 async fn backend_setup(app: AppHandle) {
+    let db = initialize_database();
+    app.manage(db);
     let app_clone = app.clone();
 
     match get_password("united-chat", "twitch-auth") {
@@ -127,11 +130,11 @@ async fn backend_setup(app: AppHandle) {
     };
 
     let themes = get_themes(app_clone.clone()).await.unwrap();
-
-    // Manage the themes state
-    app_clone.manage(crate::misc::editor::save_theme::ThemeState {
+    let to_manage = Mutex::new(ThemeState {
         themes,
     });
+    // Manage the theme state
+    app_clone.manage(to_manage);
 
     get_all_videos(app_clone.clone(), Option::from(true), None).await.unwrap();
 }

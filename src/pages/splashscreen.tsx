@@ -15,6 +15,7 @@ import {
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import TauriApi from "@/lib/Tauri";
+import {isRegistered,} from "@tauri-apps/plugin-deep-link";
 
 export default function Component() {
 	const [isLinking, setIsLinking] = useState(false)
@@ -22,50 +23,56 @@ export default function Component() {
 	const [showStreamerUrlDialog, setShowStreamerUrlDialog] = useState(false)
 	const [streamerUrl, setStreamerUrl] = useState('')
 	const [urlError, setUrlError] = useState('')
-
+	
 	const [alreadyLinked, setAlreadyLinked] = useState(false)
-
+	
 	useEffect(() => {
-		const isTwitchLinked = localStorage.getItem('twitch_linked') === 'true'
-		if (isTwitchLinked) {
-			setAlreadyLinked(true)
-			TauriApi.FinishFrontendSetup()
-		}
+		isRegistered("unitedchat").then((result) => {
+			const isTwitchLinked = localStorage.getItem('twitch_linked') === 'true'
+			if (isTwitchLinked) {
+				setAlreadyLinked(true)
+				TauriApi.FinishFrontendSetup()
+			}
+		});
 	}, [])
-
+	
 	const handleLinkAccount = () => {
 		setIsLinking(true)
-
+		
 		TauriApi.StartLinking().then((result) => {
 			if (result) {
 				TauriApi.OpenUrl(result);
+				console.log('Opened URL')
 			}
 		})
-
+		
 		TauriApi.ListenEvent("splashscreen::twitch_auth", (event) => {
 			const typedEvent = event.payload as boolean
+			console.log(typedEvent)
 			if (typedEvent) {
 				setAlreadyLinked(true)
 				localStorage.setItem('twitch_linked', 'true')
 				TauriApi.FinishFrontendSetup()
+			} else {
+				setIsLinking(false)
 			}
 		})
 	}
-
+	
 	const handleContinueWithoutAccount = () => {
 		setShowConfirmDialog(true)
 	}
-
+	
 	const handleConfirmContinueWithoutAccount = () => {
 		setShowConfirmDialog(false)
 		setShowStreamerUrlDialog(true)
 	}
-
+	
 	function validateUrl(url: string) {
 		const twitchUrlRegex = /^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]+)$/
 		return twitchUrlRegex.test(url)
 	}
-
+	
 	function getChannelName(url: string) {
 		const match = url.match(/^(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9_]+)$/)
 		if (match) {
@@ -73,16 +80,16 @@ export default function Component() {
 		}
 		return ''
 	}
-
+	
 	const handleStreamerUrlSubmit = () => {
 		if (validateUrl(streamerUrl)) {
 			setUrlError('')
 			setShowStreamerUrlDialog(false)
-
+			
 			setAlreadyLinked(true)
 			localStorage.setItem('twitch_linked', 'true')
 			const channelName = getChannelName(streamerUrl)
-
+			
 			TauriApi.SkipLinking(
 				streamerUrl,
 				channelName
@@ -97,7 +104,7 @@ export default function Component() {
 			setUrlError('Please enter a valid Twitch channel URL')
 		}
 	}
-
+	
 	return (
 		<>
 			{
@@ -159,7 +166,7 @@ export default function Component() {
 								</Button>
 							</CardContent>
 						</Card>
-
+						
 						<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
 							<AlertDialogContent>
 								<AlertDialogHeader>
@@ -176,7 +183,7 @@ export default function Component() {
 								</AlertDialogFooter>
 							</AlertDialogContent>
 						</AlertDialog>
-
+						
 						<AlertDialog open={showStreamerUrlDialog} onOpenChange={setShowStreamerUrlDialog}>
 							<AlertDialogContent>
 								<AlertDialogHeader>

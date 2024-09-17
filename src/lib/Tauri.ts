@@ -71,15 +71,18 @@ export default class TauriApi {
 	 * @returns {Promise<void>} A promise that resolves when the connection is established.
 	 */
 	public static async StartUnitedChat(
-		yt_id?: string,
-		interval?: number,
+		youtube?: {
+			yt_id?: string,
+			interval?: number,
+		}
 	): Promise<void> {
-		return await this.command<void>("united_chat_init", {
-			youtube: {
-				yt_id,
-				interval
-			}
-		});
+		if (youtube) {
+			return await this.command<void>("united_chat_init", {
+				youtube
+			})
+		}
+
+		return await this.command<void>("united_chat_init", {});
 	}
 
 	/**

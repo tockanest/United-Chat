@@ -1,0 +1,51 @@
+.fade-out {
+    opacity: 0;
+    transition: opacity 3s ease-out;
+}
+
+@keyframes slideFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slide-from-right {
+    animation: slideFromRight 0.5s ease-out forwards;
+}
+
+@keyframes slideFromBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.slide-from-bottom {
+    animation: slideFromBottom 0.5s ease-out;
+}
+
+@keyframes typewriter {
+    from {
+        width: 0;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+.typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid;
+    width: 0;
+    animation: typewriter 3s steps(40, end) 1s forwards;
+}

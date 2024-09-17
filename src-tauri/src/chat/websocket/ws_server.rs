@@ -78,7 +78,7 @@ impl WebSocketServer {
         clients: Arc<Mutex<Vec<Tx>>>,
         client_addresses: Arc<Mutex<HashSet<String>>>,
         addr_str: String,
-        mut shutdown_signal: watch::Receiver<()>
+        mut shutdown_signal: watch::Receiver<()>,
     ) {
         loop {
             tokio::select! {
@@ -111,12 +111,15 @@ impl WebSocketServer {
     }
 
     pub async fn broadcast(&self, msg: Message) {
-        let clients = self.clients.lock().await;
-        for client in clients.iter() {
+        let mut clients = self.clients.lock().await;
+        clients.retain(|client| {
             if let Err(e) = client.send(msg.clone()) {
                 eprintln!("Error broadcasting message: {}", e);
+                false // Remove the client if sending fails
+            } else {
+                true // Keep the client if sending succeeds
             }
-        }
+        });
     }
 
     pub async fn close(&self) {

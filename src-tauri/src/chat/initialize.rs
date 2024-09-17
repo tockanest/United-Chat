@@ -22,7 +22,7 @@ pub(crate) struct YoutubeInfo {
 #[tauri::command]
 pub(crate) async fn united_chat_init(
     app: AppHandle,  // app is not `Clone` by default
-    youtube: YoutubeInfo,
+    youtube: Option<YoutubeInfo>,
 ) {
     let ws_started = Arc::clone(&app.state::<UnitedChat>().websocket_started);
 
@@ -56,18 +56,25 @@ pub(crate) async fn united_chat_init(
     let ws_server_youtube = ws_server.clone();
 
     // Check if YouTube info is provided and start the YouTube live chat client concurrently
-    let youtube_handle = if !youtube.yt_id.is_empty() {
-        println!("Starting YouTube live chat client");
-        Some(tokio::spawn(async move {
-            youtube_polling_cmd(
-                youtube.interval,
-                youtube.yt_id.clone(),
-                stop_flag_youtube,
-                ws_server_youtube,
-            ).await;
-        }))
-    } else {
-        None
+    let youtube_handle = match youtube {
+        Some(yt_info) => {
+            let youtube_handle = if !yt_info.yt_id.is_empty() {
+                println!("Starting YouTube live chat client");
+                Some(tokio::spawn(async move {
+                    youtube_polling_cmd(
+                        yt_info.interval,
+                        yt_info.yt_id.clone(),
+                        stop_flag_youtube,
+                        ws_server_youtube,
+                    ).await;
+                }))
+            } else {
+                None
+            };
+
+            youtube_handle
+        }
+        None => None,
     };
 
     // Use tokio::spawn to monitor the stop_flag in the background

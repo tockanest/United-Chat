@@ -1,4 +1,3 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
 use keyring::Entry;
 use std::fs;
 use tauri::{AppHandle, Manager, WebviewWindowBuilder};
@@ -11,7 +10,7 @@ pub(crate) async fn twitch_linking(app: AppHandle) {
     }
 
     match get_password("united-chat", "twitch-auth") {
-        Ok(auth) => {
+        Ok(_auth) => {
             // Remove the password from the keyring if any
             let entry = Entry::new("united-chat", "twitch-auth").unwrap();
             entry.delete_credential().unwrap();
@@ -20,10 +19,6 @@ pub(crate) async fn twitch_linking(app: AppHandle) {
             println!("Error: {}", e);
         }
     }
-
-    // Remove the user information from the state
-    app.manage(UserInformation::default());
-    app.manage(ImplicitGrantFlow::default());
 
     // Remove the configuration file
     let path = dirs::config_dir().unwrap().join("United Chat");

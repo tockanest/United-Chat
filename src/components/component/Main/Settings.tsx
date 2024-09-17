@@ -23,18 +23,32 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle
 } from "@/components/ui/alert-dialog"
+import {
+	handleAddNewLive,
+	handleConfirmAddLive,
+	handleRemoveSelected,
+	handleSelectAll,
+	handleSelectStream
+} from "@/components/component/Main/Helpers/settingsUtils";
+import {replacePlaceholders} from "@/components/component/Main/Helpers/webChatUtils";
 
-type LiveStream = {
-	id: string
-	name: string
-	scheduledTime: string | null
-	status: 'live' | 'scheduled' | 'offline'
-}
 
-type ChatTheme = {
-	id: string
-	name: string
-	preview: string
+const mockMessage: PlatformMessage<"twitch" | "youtube"> = {
+	platform: "twitch",
+	message: {
+		id: "123456",
+		display_name: "TestUser",
+		message: "This is a test message",
+		raw_data: {
+			raw_message: "This is a test message",
+			raw_emotes: ''
+		},
+		user_color: "#FF0000",
+		user_badges: [],
+		timestamp: moment().unix(),
+		emotes: [],
+		tags: []
+	},
 }
 
 export default function AppSettings(
@@ -57,11 +71,7 @@ export default function AppSettings(
 
 	const [appTheme, setAppTheme] = useState('system')
 
-	const [chatThemes, setChatThemes] = useState<ChatTheme[]>([
-		{id: '1', name: 'Default', preview: '/placeholder.svg?height=100&width=200'},
-		{id: '2', name: 'Neon', preview: '/placeholder.svg?height=100&width=200'},
-		{id: '3', name: 'Minimalist', preview: '/placeholder.svg?height=100&width=200'},
-	])
+	const [chatThemes, setChatThemes] = useState<ChatTheme[]>([])
 	const [selectedChatTheme, setSelectedChatTheme] = useState('1')
 
 	const [youtubeConnected, setYoutubeConnected] = useState(false)
@@ -69,104 +79,6 @@ export default function AppSettings(
 	const [startLinkingAlert, setStartLinkingAlert] = useState(false)
 	const [logoutAlert, setLogoutAlert] = useState(false)
 
-	const handleSelectAll = () => {
-		if (selectedStreams.length === liveStreams.length) {
-			setSelectedStreams([])
-		} else {
-			setSelectedStreams(liveStreams.map(stream => stream.id))
-		}
-	}
-
-	const handleSelectStream = (id: string) => {
-		if (selectedStreams.includes(id)) {
-			setSelectedStreams(selectedStreams.filter(streamId => streamId !== id))
-		} else {
-			setSelectedStreams([...selectedStreams, id])
-		}
-	}
-
-	const handleRemoveSelected = () => {
-		const streamsToRemove = liveStreams.filter(stream => selectedStreams.includes(stream.id))
-		const idsToRemove = streamsToRemove.map(stream => stream.id)
-
-		idsToRemove.forEach(async (id) => {
-			const removeStream = await TauriApi.DeleteVideo(id)
-			if (!removeStream) {
-				return toast({
-					title: "Error",
-					description: "An error occurred while removing the live stream.",
-					variant: "destructive",
-				})
-			}
-		})
-
-		setLiveStreams(liveStreams.filter(stream => !idsToRemove.includes(stream.id)))
-		setSelectedStreams([])
-	}
-
-	const handleAddNewLive = async () => {
-		setIsLoading(true)
-		try {
-			const video = await TauriApi.GetVideo(newLiveStream.url)
-
-			const liveStreamsCount = liveStreams.filter(stream => stream.status === 'live').length
-			if (video.stream_type === 'live' && liveStreamsCount > 0) {
-				setPendingVideo(video)
-				setShowConfirmDialog(true)
-				return
-			}
-
-			await addVideoToStreams(video)
-		} catch (err: any) {
-			console.log(err)
-			toast({
-				title: "Error",
-				description: (typeof err === 'string' ? err : err.error as string) || "An error occurred.",
-				variant: "destructive",
-			})
-		} finally {
-			setIsLoading(false)
-		}
-	}
-
-	const addVideoToStreams = async (video: any) => {
-
-		const storeVideo = await TauriApi.StoreVideo(video)
-
-		if (!storeVideo) {
-			return toast({
-				title: "Error",
-				description: "An error occurred while adding the live stream.",
-				variant: "destructive",
-			})
-		}
-
-		setLiveStreams([
-			...liveStreams,
-			{
-				id: video.video_id,
-				name: video.video_name,
-				scheduledTime: video.scheduled_start_time,
-				status: video.stream_type,
-			}
-		])
-
-		toast({
-			title: "Success",
-			description: "New live stream added successfully.",
-		})
-
-		setIsAddDialogOpen(false)
-		setNewLiveStream({url: ''})
-	}
-
-	const handleConfirmAddLive = async () => {
-		if (pendingVideo) {
-			await addVideoToStreams(pendingVideo)
-			setPendingVideo(null)
-		}
-		setShowConfirmDialog(false)
-	}
 
 	useEffect(() => {
 		const liveStreamsCount = liveStreams.filter(stream => stream.status === 'live').length
@@ -174,7 +86,7 @@ export default function AppSettings(
 		if (liveStreamsCount > 1) {
 			toast({
 				title: "Warning",
-				description: "You have more than one live stream running at the same time. You should not have more than one live stream running at the same time to avoid issues.",
+				description: "You have more than one live stream running at the same time. To avoid issues, please consider not adding a second running stream.",
 				variant: "destructive",
 			})
 		}
@@ -184,7 +96,6 @@ export default function AppSettings(
 		const fetchLiveStreams = async () => {
 			try {
 				const streams = await TauriApi.GetAllVideos()
-				console.log(streams)
 				setLiveStreams(streams.map(stream => ({
 					id: stream.video_id,
 					name: stream.video_name,
@@ -203,6 +114,25 @@ export default function AppSettings(
 		}
 
 		fetchLiveStreams()
+
+		const getChatThemes = async () => {
+			const themes = (await TauriApi.GetAvailableThemes()).map(async ([name]) => {
+				const getTheme = await TauriApi.GetEditorTheme(name);
+
+
+				return {
+					id: name,
+					name: getTheme.name,
+					html: getTheme.html_code,
+					css: getTheme.css_code,
+				}
+			});
+
+			setChatThemes(await Promise.all(themes));
+
+		}
+
+		getChatThemes()
 
 		if (user) {
 			setTwitchConnected(true)
@@ -286,7 +216,9 @@ export default function AppSettings(
 						<CardContent>
 							<div className="mb-4 flex justify-between items-center">
 								<div>
-									<Button variant="outline" className="mr-2" onClick={handleRemoveSelected}
+									<Button variant="outline" className="mr-2" onClick={() => {
+										handleRemoveSelected(selectedStreams, setSelectedStreams, liveStreams, setLiveStreams, toast)
+									}}
 									        disabled={selectedStreams.length === 0}>
 										Remove Selected
 									</Button>
@@ -324,7 +256,9 @@ export default function AppSettings(
 												/>
 											</div>
 										</div>
-										<Button onClick={handleAddNewLive} disabled={isLoading}>
+										<Button onClick={() => {
+											handleAddNewLive(newLiveStream, liveStreams, toast, setIsLoading, setShowConfirmDialog, setPendingVideo, setLiveStreams, setIsAddDialogOpen, setNewLiveStream)
+										}} disabled={isLoading}>
 											{isLoading ? 'Adding...' : 'Add Live'}
 										</Button>
 									</DialogContent>
@@ -337,7 +271,9 @@ export default function AppSettings(
 										<TableHead className="w-[50px]">
 											<Checkbox
 												checked={selectedStreams.length === liveStreams.length}
-												onCheckedChange={handleSelectAll}
+												onCheckedChange={() => {
+													handleSelectAll(selectedStreams, setSelectedStreams, liveStreams)
+												}}
 											/>
 										</TableHead>
 										<TableHead>Video Name</TableHead>
@@ -352,7 +288,9 @@ export default function AppSettings(
 											<TableCell>
 												<Checkbox
 													checked={selectedStreams.includes(stream.id)}
-													onCheckedChange={() => handleSelectStream(stream.id)}
+													onCheckedChange={() => {
+														handleSelectStream(stream.id, selectedStreams, setSelectedStreams)
+													}}
 												/>
 											</TableCell>
 											<TableCell>{stream.name}</TableCell>
@@ -430,20 +368,30 @@ export default function AppSettings(
 						</CardHeader>
 						<CardContent>
 							<div className="grid grid-cols-3 gap-4">
+								<script src="/styles/tailwind_complete.css"/>
 								{chatThemes.map((theme) => (
 									<Card
-										key={theme.id}
+										key={
+											theme.id
+										}
 										className={`cursor-pointer ${
 											selectedChatTheme === theme.id ? 'border-primary' : 'border-border'
 										}`}
 										onClick={() => setSelectedChatTheme(theme.id)}
 									>
 										<CardHeader>
-											<CardTitle>{theme.name}</CardTitle>
+											<CardTitle>{
+												theme.name.charAt(0).toLocaleUpperCase() + theme.id.slice(1).toLocaleLowerCase()
+											}</CardTitle>
 										</CardHeader>
 										<CardContent>
-											<img src={theme.preview} alt={`${theme.name} theme preview`}
-											     className="w-full h-auto rounded"/>
+											<style>
+												{theme.css}
+											</style>
+											{/* Why is the styling not loading? TODO: Fix this */}
+											<div className="w-full h-fit rounded"
+											     dangerouslySetInnerHTML={{__html: replacePlaceholders(theme.html, mockMessage.message, "twitch")}}
+											/>
 										</CardContent>
 									</Card>
 								))}
@@ -497,7 +445,9 @@ export default function AppSettings(
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel onClick={() => setShowConfirmDialog(false)}>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleConfirmAddLive}>Confirm</AlertDialogAction>
+						<AlertDialogAction onClick={() => {
+							handleConfirmAddLive(pendingVideo, setPendingVideo, setShowConfirmDialog, liveStreams, setLiveStreams, toast, setIsAddDialogOpen, setNewLiveStream)
+						}}>Confirm</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

@@ -65,6 +65,7 @@ export default function Editor(
 		maxHeight: 600,
 		currentWidth: 800,
 		currentHeight: 600,
+		messageTransition: "none"
 	});
 
 	useEffect(() => {
@@ -155,27 +156,26 @@ export default function Editor(
 			}
 		} else {
 			const startEverything = async () => {
-				let yt_info: {
-					yt_id: string,
-					interval: number
-				} | null = null;
-
 				const getYtStreams = await TauriApi.GetAllVideos();
 				if (getYtStreams.length > 0) {
 					// Get the first stream that has the live status
 					const liveStream = getYtStreams.find(stream => stream.stream_type === "live");
 
 					if (liveStream) {
-						yt_info = {
-							yt_id: liveStream.video_id,
-							// In milliseconds
-							interval: 2000 // Will change to user-set value instead of fixed value
+						try {
+							return await TauriApi.StartUnitedChat({yt_id: liveStream.video_id, interval: 2000});
+						} catch (e) {
+							console.error(e);
 						}
 					}
 				}
 
-				await TauriApi.StartUnitedChat(yt_info?.yt_id, yt_info?.interval);
-				console.log("Everything should be started now");
+				try {
+					await TauriApi.StartUnitedChat();
+					console.log("Everything should be started now");
+				} catch (e) {
+					console.error(e);
+				}
 			}
 
 			startEverything();

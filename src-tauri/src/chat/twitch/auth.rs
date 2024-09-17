@@ -31,13 +31,13 @@ pub(crate) struct UserSkippedInformation {
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-struct InternalUserInformation {
-    pub broadcaster_type: String,
-    pub description: String,
-    pub display_name: String,
-    pub id: String,
-    pub login: String,
-    pub profile_image_url: String,
+pub(crate) struct InternalUserInformation {
+    pub(crate) broadcaster_type: String,
+    pub(crate) description: String,
+    pub(crate) display_name: String,
+    pub(crate) id: String,
+    pub(crate) login: String,
+    pub(crate) profile_image_url: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -148,124 +148,86 @@ fn validate_user(auth: String) -> Result<UserInformation, String> {
     }
 }
 
-pub(crate) fn twitch_auth(args: Vec<String>, app: &AppHandle) {
-    // Check if window was opened by a deeplink
-    let mut is_deep_link = false;
-
-    for arg in &args {
-        if arg.starts_with("unitedchat://") {
-            // Adjust the prefix according to your deep link scheme
-            is_deep_link = true;
-            break; // Found a deep link, no need to check further
-        }
+pub(crate) fn twitch_auth(app: &AppHandle, query_parameters: Vec<&str>) {
+    // Convert the query parameters into a HashMap for easier access
+    let mut params_map: HashMap<String, String> = HashMap::new();
+    for param in query_parameters {
+        let mut iter = param.splitn(2, '=');
+        let key = iter.next().unwrap_or("").trim();
+        let value = iter.next().unwrap_or("").trim();
+        params_map.insert(key.to_string(), value.to_string());
     }
 
-    if is_deep_link {
-        // Break down the arguments by removing the "unitedchat://" prefix and parsing what's in between the nexts slashes
-        // For example: "unitedchat://twitch_link?client_id=123&scopes=chat:read" will be parsed to "twitch_link", "client_id=123", "scopes=chat:read"
-        let deep_link_arg = args
-            .iter()
-            .find(|arg| arg.starts_with("unitedchat://"))
-            .unwrap();
-        let full_path = deep_link_arg
-            .strip_prefix("unitedchat://")
-            .unwrap_or(deep_link_arg);
-        let path_components: Vec<&str> = full_path.split("/").collect();
+    println!("Params: {:?}", params_map);
 
-        let query_parameters_str = path_components.last().unwrap_or(&"");
-        let query_parameters: Vec<&str> = query_parameters_str
-            .split('?')
-            .last()
-            .unwrap_or("")
-            .split('&')
-            .collect();
+    // Now you can access the query parameters using the map
+    let access_token = params_map
+        .get("access_token")
+        .unwrap_or(&"".to_string())
+        .to_string();
+    let scope = params_map
+        .get("scope")
+        .unwrap_or(&"".to_string())
+        .to_string();
+    let state = params_map
+        .get("state")
+        .unwrap_or(&"".to_string())
+        .to_string();
+    let token_type = params_map
+        .get("token_type")
+        .unwrap_or(&"".to_string())
+        .to_string();
 
-        match path_components[0] {
-            "twitch_link" => {
-                // Convert the query parameters into a HashMap for easier access
-                let mut params_map: HashMap<String, String> = HashMap::new();
-                for param in query_parameters {
-                    let mut iter = param.splitn(2, '=');
-                    let key = iter.next().unwrap_or("").trim();
-                    let value = iter.next().unwrap_or("").trim();
-                    params_map.insert(key.to_string(), value.to_string());
-                }
-
-                // Now you can access the query parameters using the map
-                let access_token = params_map
-                    .get("#access_token")
-                    .unwrap_or(&"".to_string())
-                    .to_string();
-                let scope = params_map
-                    .get("scope")
-                    .unwrap_or(&"".to_string())
-                    .to_string();
-                let state = params_map
-                    .get("state")
-                    .unwrap_or(&"".to_string())
-                    .to_string();
-                let token_type = params_map
-                    .get("token_type")
-                    .unwrap_or(&"".to_string())
-                    .to_string();
-
-                // Check if any of them are empty, and if one of them are, reset the setup
-                if access_token.is_empty()
-                    || scope.is_empty()
-                    || state.is_empty()
-                    || token_type.is_empty()
-                {
-                    app.emit("splashscreen::twitch_auth", false)
-                        .expect("Failed to emit setup_complete event");
-                } else {
-                    // If all query parameters are present, emit the setup_complete event with the query parameters
-
-                    let user = validate_user(access_token.clone()).unwrap();
-                    app.manage(user.clone());
-
-                    // Write the user information to a json file at dirs::config_dir() / "united-chat" / "twitch-auth.json"
-                    let path = dirs::config_dir().unwrap().join("United Chat");
-                    if !path.exists() {
-                        std::fs::create_dir_all(&path).expect("Failed to create directory");
-                    }
-
-                    let user_file = path.join("twitch-auth.json");
-                    std::fs::File::create(user_file.clone()).expect("Failed to create file");
-
-                    let mut file = OpenOptions::new()
-                        .write(true)
-                        .open(user_file)
-                        .expect("Failed to open file");
-                    file.write_all(serde_json::to_string(&user).unwrap().as_bytes())
-                        .expect("Failed to write to file");
-
-                    let state = ImplicitGrantFlow {
-                        access_token,
-                        scope,
-                        state,
-                        token_type,
-                        error: None,
-                        error_description: None,
-                        skipped: Option::from(false),
-                    };
-                    app.manage(state.clone());
-
-                    let entry = Entry::new("united-chat", "twitch-auth")
-                        .unwrap_or_else(|e| panic!("Error: {}", e));
-                    entry
-                        .set_password(&serde_json::to_string(&state).unwrap())
-                        .unwrap_or_else(|e| panic!("Error: {}", e));
-
-                    app.emit("splashscreen::twitch_auth", true)
-                        .expect("Failed to emit setup_complete event");
-                }
-            }
-            _ => {
-                println!("Not matched")
-            }
-        }
+    // Check if any of them are empty, and if one of them are, reset the setup
+    if access_token.is_empty()
+        || scope.is_empty()
+        || state.is_empty()
+        || token_type.is_empty()
+    {
+        app.emit("splashscreen::twitch_auth", false)
+            .expect("Failed to emit setup_complete event");
     } else {
-        println!("Not opened via deep link");
+        // If all query parameters are present, emit the setup_complete event with the query parameters
+
+        let user = validate_user(access_token.clone()).unwrap();
+        println!("User: {:?}", user);
+        app.manage(user.clone());
+
+        // Write the user information to a json file at dirs::config_dir() / "united-chat" / "twitch-auth.json"
+        let path = dirs::config_dir().unwrap().join("United Chat");
+        if !path.exists() {
+            std::fs::create_dir_all(&path).expect("Failed to create directory");
+        }
+
+        let user_file = path.join("twitch-auth.json");
+        std::fs::File::create(user_file.clone()).expect("Failed to create file");
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .open(user_file)
+            .expect("Failed to open file");
+        file.write_all(serde_json::to_string(&user).unwrap().as_bytes())
+            .expect("Failed to write to file");
+
+        let state = ImplicitGrantFlow {
+            access_token,
+            scope,
+            state,
+            token_type,
+            error: None,
+            error_description: None,
+            skipped: Option::from(false),
+        };
+        app.manage(state.clone());
+
+        let entry = Entry::new("united-chat", "twitch-auth")
+            .unwrap_or_else(|e| panic!("Error: {}", e));
+        entry
+            .set_password(&serde_json::to_string(&state).unwrap())
+            .unwrap_or_else(|e| panic!("Error: {}", e));
+
+        app.emit("splashscreen::twitch_auth", true)
+            .expect("Failed to emit setup_complete event");
     }
 }
 

@@ -144,7 +144,7 @@ pub(crate) async fn update_video(id: String, app: AppHandle) {
 }
 
 // This is for testing purposes only, will not be used on prod.
-#[warn(unused_must_use)]
+#[warn(dead_code)]
 async fn insert() {
     let db_path = dirs::config_dir().unwrap().join("United Chat").join("database");
 

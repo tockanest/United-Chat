@@ -86,13 +86,12 @@ pub(crate) async fn message_processor(
             }
 
             // Get the equivalent emote name on the content
-            let mut emote_image = String::new();
             for (start, end, emote_id) in emote_positions {
                 // Name, not id
                 let emote_name = &content[start..end + 1];
                 let emote_url = construct_emote_url(&emote_id);
                 parsed_emotes.push((emote_name.to_string(), emote_url.clone()));
-                emote_image = format!(
+                let emote_image = format!(
                     "<img id=\"{}\" src=\"{}\" alt=\"{}\" />",
                     emote_name, emote_url, emote_name
                 );

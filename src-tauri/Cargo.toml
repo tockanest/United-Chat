@@ -1,6 +1,6 @@
 [package]
-name = "united-chat"
-version = "0.1.0"
+name = "United-Chat"
+version = "0.1.2"
 description = "United Chat"
 authors = [
     "Nixyan - nixyan@tockanest.com"
@@ -33,11 +33,11 @@ tauri-plugin-shell = "2.0.0-rc.1"
 tauri-plugin-dialog = "2.0.0-rc.1"
 rand = "0.8.5"
 chrono = "0.4.38"
-tauri-plugin-deep-link = "2.0.0-rc.1"
+tauri-plugin-deep-link = "2.0.0-rc.5"
+url="2.5.2"
 dirs = "5.0.1"
 tauri-plugin-localhost = "2.0.0-rc.0"
 sled = "0.34.7"
-backtrace = "0.3.73"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "2.0.0-rc.0"
+tauri-plugin-single-instance = { version = "2.0.0-rc.3", features = ["deep-link"] }

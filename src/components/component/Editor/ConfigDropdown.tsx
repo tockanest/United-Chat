@@ -1,6 +1,12 @@
 import React from 'react'
 import {Button} from "@/components/ui/button"
-import {DropdownMenu, DropdownMenuContent, DropdownMenuTrigger} from "@/components/ui/dropdown-menu"
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
 import {Label} from "@/components/ui/label"
 import {Switch} from "@/components/ui/switch"
 import {Input} from "@/components/ui/input"
@@ -8,10 +14,9 @@ import {Slider} from "@/components/ui/slider"
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip"
 import {Settings} from 'lucide-react'
 
-
 interface ConfigDropdownProps {
 	config: ConfigState
-	onConfigChange: (key: keyof ConfigState, value: number | boolean) => void
+	onConfigChange: (key: keyof ConfigState, value: number | boolean | string) => void
 }
 
 export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownProps) {
@@ -81,23 +86,54 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 								</div>
 							</TooltipTrigger>
 							<TooltipContent align={"end"} className={"mb-4"}>
-								<p>
-									Enable or disable fade out animation when a message is removed
-								</p>
+								<p>Enable or disable fade out animation when a message is removed</p>
 							</TooltipContent>
 						</Tooltip>
-
 					</TooltipProvider>
 
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="space-y-2">
-									<Label htmlFor="scalingValue" className="text-sm font-medium">
-										Message Remove Timer
-									</Label>
+									<Label htmlFor="messageTransition" className="text-sm font-medium">Message
+										Transition</Label>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button variant="outline" className="w-full justify-between">
+												{config.messageTransition}
+												<Settings className="h-4 w-4 opacity-50"/>
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent className="w-56">
+											<DropdownMenuRadioGroup value={
+												config.messageTransition.charAt(0).toUpperCase() + config.messageTransition.slice(1)
+											}
+											                        onValueChange={(value) => onConfigChange('messageTransition', value)}>
+												<DropdownMenuRadioItem value="none">None</DropdownMenuRadioItem>
+												<DropdownMenuRadioItem value="slide bottom">Slide from
+													Bottom</DropdownMenuRadioItem>
+												<DropdownMenuRadioItem value="slide in">Slide In</DropdownMenuRadioItem>
+												<DropdownMenuRadioItem
+													value="typewriter">Typewriter</DropdownMenuRadioItem>
+											</DropdownMenuRadioGroup>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Select the transition effect for new messages</p>
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<div className="space-y-2">
+									<Label htmlFor="messageRemoveTimer" className="text-sm font-medium">Message Remove
+										Timer</Label>
 									<Slider
-										id="scalingValue"
+										id="messageRemoveTimer"
 										min={0.1}
 										max={15.0}
 										step={0.1}
@@ -109,9 +145,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 								</div>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p>
-									Set the message remove timer for messages (default: 5 seconds)
-								</p>
+								<p>Set the message remove timer for messages (default: 5 seconds)</p>
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
@@ -120,11 +154,9 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="space-y-2">
-									<Label htmlFor="maxWidth" className="text-sm font-medium">
-										Max Messages
-									</Label>
+									<Label htmlFor="maxMessages" className="text-sm font-medium">Max Messages</Label>
 									<Input
-										id="maxWidth"
+										id="maxMessages"
 										type="number"
 										value={config.maxMessages}
 										onChange={(e) => onConfigChange('maxMessages', parseInt(e.target.value))}
@@ -137,8 +169,8 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 									How many messages before the oldest message is removed?
 									<br/>
 									If the total messages exceed this number, the oldest message will be removed
-									immediately,<br/>
-									ignoring the fading out animation (if set) and all other message removal processes.
+									immediately, ignoring the fading out animation (if set) and all other message
+									removal processes.
 								</p>
 							</TooltipContent>
 						</Tooltip>
@@ -224,7 +256,6 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

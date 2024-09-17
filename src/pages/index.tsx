@@ -4,7 +4,7 @@ import TauriApi from "@/lib/Tauri";
 import Header from "@/components/component/Main/Header";
 import {togglePreview} from "@/components/component/Main/Helpers/MainFrame";
 import Editor from "@/components/component/Main/Editor";
-import UnitedChatSettings from "@/pages/Settings";
+import UnitedChatSettings from "@/components/component/Main/Settings";
 
 export default function UnitedChat() {
 
