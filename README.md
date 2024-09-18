@@ -1,4 +1,3 @@
-
 ---
 
 <div align="center">
@@ -12,7 +11,8 @@
 
 Welcome to **United Chat**—your go-to solution for merging Twitch and YouTube chats into a seamless experience!
 
-We’re on a journey to make your multi-stream chatting as smooth as possible, with just a touch of complexity to keep things interesting.
+We’re on a journey to make your multi-stream chatting as smooth as possible, with just a touch of complexity to keep
+things interesting.
 
 </div>
 
@@ -26,16 +26,28 @@ We’re on a journey to make your multi-stream chatting as smooth as possible, w
 - [React](https://reactjs.org/) for building interactive user components
 - [TypeScript](https://www.typescriptlang.org/) for a type-safe development experience
 
-This app consolidates chat messages from Twitch and YouTube into a single, unified window. While we're still ironing out the kinks, progress is steady, and we're pushing towards a fully functional app. 🚀
+This app consolidates chat messages from Twitch and YouTube into a single, unified window. While we're still ironing out
+the kinks, progress is steady, and we're pushing towards a fully functional app. 🚀
+
+Please note that while this is made to facilitate multi-stream chatting, it's not a chatbot and doesn't support sending
+messages.
+
+It also might not count as a viewer on the platforms, so keep that in mind when using it.
+
+Please don't use this app to spam or harass streamers or other viewers. We're all here to have a good time! 🎉
+
+Use this app responsibly and keep in mind that this is a work in progress. We're always open to feedback and
+suggestions!
 
 ### **Current Status**
 
 - **Twitch Integration**: Fully implemented, including connection, channel joining, and message reception. 🕹️
-- **YouTube Integration**: Coming soon! 🎥
+- **YouTube Integration**: Implemented, but still in the testing phase. 🎥
 
 ### **Performance**
 
-Performance is still in the testing phase, so don't expect perfection just yet. We welcome your feedback to help us improve! DevTools are available for debugging, and you might see some warnings—just React doing its thing.
+Performance is still in the testing phase, so don't expect perfection just yet. We welcome your feedback to help us
+improve! DevTools are available for debugging, and you might see some warnings—just React doing its thing.
 
 For those interested in the nitty-gritty, here's a peek at our tech stack:
 <details>
@@ -62,7 +74,8 @@ For those interested in the nitty-gritty, here's a peek at our tech stack:
 - **GitHub Actions**: For continuous integration and deployment.
 - **GitHub Releases**: For app distribution.
 
-Feel free to dive into the [source code](https://github.com/tockawaffle/United-Chat) and see how it's built. Suggestions and feedback are always welcome—just keep it constructive!
+Feel free to dive into the [source code](https://github.com/tockawaffle/United-Chat) and see how it's built. Suggestions
+and feedback are always welcome—just keep it constructive!
 
 </details>
 
@@ -72,15 +85,15 @@ Feel free to dive into the [source code](https://github.com/tockawaffle/United-C
 
 - [X] Design the UI 🎨
 - [X] Implement Rust Backend 🔧
-  - [X] Twitch API 🕹️
-  - [X] YouTube API 🎥
+    - [X] Twitch API 🕹️
+    - [X] YouTube API 🎥
 - [X] Enhance Message Handling 💬
-  - [X] Twitch
-  - [X] YouTube
+    - [X] Twitch
+    - [X] YouTube
 - [ ] Develop User Linking 🔗
-  - [X] Twitch (Account Linking)
-  - [X] Twitch (No Linking)
-  - [ ] YouTube
+    - [X] Twitch (Account Linking)
+    - [X] Twitch (No Linking)
+    - [ ] YouTube
 - [X] Build Chat UI 🖥️
 - [ ] Conduct Performance Tests 🏎️
 
@@ -97,7 +110,14 @@ You have two options:
 2. Use the `.exe` or `.msi` installer for Windows.
 3. Install and run the app.
 4. You can link your Twitch account or use a Twitch streamer URL to start chatting.
-5. To access the YouTube Chat, you'll have to access the Settings page (CRTL + D) and 
+5. To access the YouTube Chat, you'll have to access the Settings page (CRTL + D), click on "Add Live" and enter a
+   YouTube stream URL.
+   It's recommended to have only one maximum live stream at a time.
+   You can add more streams, including scheduled ones by doing the same process.
+6. Select or create your own theme on the main page.
+7. Still on the main page, click on "Start" to start the chat.
+8. Copy the URL from the browser and paste it into your stream app, or use the app's built-in browser and use that.
+9. Enjoy your chat!
 
 </details>
 
