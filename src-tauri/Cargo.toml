@@ -9,9 +9,6 @@ edition = "2021"
 license = "AGPL-3"
 readme = "../README.md"
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 name = "united_chat_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
@@ -20,7 +17,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2.0.0-rc", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc.3", features = ["devtools"] }
+tauri = { version = "2.0.0-rc.3", features = ["devtools", "test"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12.5", features = ["blocking", "multipart"] }
@@ -34,10 +31,14 @@ tauri-plugin-dialog = "2.0.0-rc.1"
 rand = "0.8.5"
 chrono = "0.4.38"
 tauri-plugin-deep-link = "2.0.0-rc.5"
-url="2.5.2"
+url = "2.5.2"
 dirs = "5.0.1"
 tauri-plugin-localhost = "2.0.0-rc.0"
 sled = "0.34.7"
+lazy_static = "1.4"
+lru = "0.12"
+roxmltree = "0.20.0"
+tempfile = "3.14.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { version = "2.0.0-rc.3", features = ["deep-link"] }

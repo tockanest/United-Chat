@@ -16,7 +16,7 @@ export const handleResize = (
 	let newSize: number;
 
 	if (previewPosition === 'left' || previewPosition === 'right') {
-		const currentX = e.clientX - containerRect.left;
+		const currentX = e.clientX - containerRect.left + 50;
 		newSize = previewPosition === 'left'
 			? ((containerRect.width - currentX) / containerRect.width) * 100
 			: (currentX / containerRect.width) * 100;

@@ -1,9 +1,13 @@
 use crate::chat::youtube::polling::{get_video_cmd, VideoInfo};
+use lazy_static::lazy_static;
+use lru::LruCache;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -23,87 +27,109 @@ pub(crate) async fn store_new_livestream(data: VideoInfo, app: AppHandle) -> Res
     }
 
     // Insert data into the sled database
-    db.insert(video_id, serialized_data).map_err(|e| e.to_string())?;
+    db.insert(video_id, serialized_data)
+        .map_err(|e| e.to_string())?;
     db.flush().map_err(|e| e.to_string())?;
 
     Ok(true)
 }
 
+lazy_static! {
+    static ref VIDEO_CACHE: Mutex<LruCache<String, VideoInfo>> =
+        Mutex::new(LruCache::new(NonZeroUsize::new(100).unwrap()));
+}
+
 #[tauri::command]
-/// WARNING: Using the update_status parameter will cause the function to check every video in the database for updates.
-/// This can be very slow if there are a lot of videos in the database.
+pub(crate) async fn get_video_from_db(id: String, app: AppHandle) -> Result<VideoInfo, String> {
+    // Check cache first
+    if let Some(video_info) = VIDEO_CACHE.lock().unwrap().get(&id) {
+        return Ok(video_info.clone());
+    }
+
+    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+
+    match db.get(&id) {
+        Ok(Some(video)) => {
+            let video_info: VideoInfo =
+                serde_json::from_slice(&video).map_err(|e| e.to_string())?;
+
+            // Cache the result
+            VIDEO_CACHE.lock().unwrap().put(id, video_info.clone());
+
+            Ok(video_info)
+        }
+        Ok(None) => Err("Video not found".to_string()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
 pub(crate) async fn get_all_videos(
     app: AppHandle,
     update_status: Option<bool>,
     max_retries: Option<usize>,
 ) -> Result<Vec<VideoInfo>, String> {
     let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    max_retries.unwrap_or(3);
     let mut videos = Vec::new();
+    let mut to_remove = Vec::new();
 
-    // Set a default max retries if not provided
-    let max_retries = max_retries.unwrap_or(3);
-    let mut retries_left = max_retries;
+    // Use batch processing for database operations
+    let batch_size = 50;
+    let mut batch = sled::Batch::default();
+    let mut current_batch_size = 0;
 
-    loop {
-        let mut video_removed = false;
+    for video in db.iter() {
+        let (key, value) = video.map_err(|e| e.to_string())?;
+        let video_info: VideoInfo = serde_json::from_slice(&value).map_err(|e| e.to_string())?;
 
-        for video in db.iter() {
-            let video_info: VideoInfo = serde_json::from_slice(&video.unwrap().1).unwrap();
+        if let Some(true) = update_status {
+            match get_video_cmd(video_info.video_id.clone().unwrap()).await {
+                Ok(updated_video) => {
+                    videos.push(updated_video.clone());
 
-            if let Some(update_status) = update_status {
-                if update_status {
-                    println!("Updating video: {}", video_info.video_id.clone().unwrap());
-                    let updated_video = get_video_cmd(video_info.video_id.clone().unwrap()).await;
+                    // Add to batch instead of immediate update
+                    let serialized_data =
+                        serde_json::to_vec(&updated_video).map_err(|e| e.to_string())?;
+                    batch.insert(&key, serialized_data);
+                    current_batch_size += 1;
 
-                    match updated_video {
-                        Ok(video) => {
-                            videos.push(video.clone());
-
-                            // Update the video in the database
-                            let serialized_data = serde_json::to_vec(&video).unwrap();
-                            db.insert(video_info.video_id.clone().unwrap(), serialized_data).unwrap();
-                            db.flush().unwrap();
-                        }
-                        Err(e) => {
-                            let error_clone = e.clone();
-
-                            if error_clone.video_id == "Unknown" {
-                                // The video was not found, remove it from the database
-                                println!("Video not found, removing from database: {}", video_info.video_id.clone().unwrap());
-                                db.remove(video_info.video_id.clone().unwrap()).unwrap();
-                                db.flush().unwrap();
-
-                                video_removed = true;
-                                break;
-                            } else {
-                                println!("Error updating video: {}", e.video_id);
-                            }
-                        }
+                    // Execute batch when it reaches the size limit
+                    if current_batch_size >= batch_size {
+                        db.apply_batch(batch).map_err(|e| e.to_string())?;
+                        batch = sled::Batch::default();
+                        current_batch_size = 0;
                     }
                 }
-            } else {
-                videos.push(video_info);
+                Err(e) => {
+                    if e.video_id == "Unknown" {
+                        to_remove.push(key);
+                    } else {
+                        eprintln!("Error updating video: {}", e.video_id);
+                    }
+                }
             }
+        } else {
+            videos.push(video_info);
         }
-
-        if !video_removed || retries_left == 0 {
-            break;
-        }
-
-        retries_left -= 1;
     }
 
+    // Apply any remaining batch operations
+    if current_batch_size > 0 {
+        db.apply_batch(batch).map_err(|e| e.to_string())?;
+    }
+
+    // Remove invalid videos in batch
+    if !to_remove.is_empty() {
+        let mut remove_batch = sled::Batch::default();
+        for key in to_remove {
+            remove_batch.remove(key);
+        }
+        db.apply_batch(remove_batch).map_err(|e| e.to_string())?;
+    }
+
+    db.flush().map_err(|e| e.to_string())?;
     Ok(videos)
-}
-
-
-#[tauri::command]
-pub(crate) async fn get_video_from_db(id: String, app: AppHandle) -> Result<VideoInfo, String> {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
-    let video = db.get(id).unwrap().unwrap();
-    let video_info: VideoInfo = serde_json::from_slice(&video).unwrap();
-
-    Ok(video_info)
 }
 
 #[tauri::command]
@@ -135,7 +161,9 @@ pub(crate) async fn update_video(id: String, app: AppHandle) {
     let video = db.get(id.clone()).unwrap().unwrap();
     let video_info: VideoInfo = serde_json::from_slice(&video).unwrap();
 
-    let updated_video = get_video_cmd(video_info.video_id.clone().unwrap()).await.unwrap();
+    let updated_video = get_video_cmd(video_info.video_id.clone().unwrap())
+        .await
+        .unwrap();
 
     let serialized_data = serde_json::to_vec(&updated_video).unwrap();
 
@@ -143,10 +171,11 @@ pub(crate) async fn update_video(id: String, app: AppHandle) {
     db.flush().unwrap();
 }
 
-// This is for testing purposes only, will not be used on prod.
-#[warn(dead_code)]
 async fn insert() {
-    let db_path = dirs::config_dir().unwrap().join("United Chat").join("database");
+    let db_path = dirs::config_dir()
+        .unwrap()
+        .join("United Chat")
+        .join("database");
 
     let db = sled::open(db_path).unwrap();
 
@@ -158,7 +187,9 @@ async fn insert() {
         stream_type: Some("live".to_string()),
         continuation: Some("dhsjagfjhsadgfkjasdgkaj".to_string()),
         video_id: Some("nAklN7qHGgk".to_string()),
-        video_name: Some("【少し】ねぇ、かまって。【 #vtuber / 個人勢 / #shorts / #asmr 】".to_string()),
+        video_name: Some(
+            "【少し】ねぇ、かまって。【 #vtuber / 個人勢 / #shorts / #asmr 】".to_string(),
+        ),
         client_version: Some("0.1.0".to_string()),
         scheduled_start_time: None,
     };

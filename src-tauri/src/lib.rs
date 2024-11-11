@@ -5,13 +5,13 @@ use crate::chat::initialize::{united_chat_init, united_chat_stop, UnitedChat};
 use crate::chat::twitch::auth::twitch_auth;
 use crate::chat::twitch::get_user::get_user;
 use crate::misc::qol::linking_ais::twitch_linking;
-use crate::misc::setup::initialize_database;
 use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_deauth};
 use chat::youtube::polling::{get_live_chat_cmd, get_video_cmd};
 use chat::youtube::state_manager::{
-    delete_video_from_db, get_all_videos, get_video_from_db, store_new_livestream,
-    update_video, update_video_metadata, StoredVideos,
+    delete_video_from_db, get_all_videos, get_video_from_db, store_new_livestream, update_video,
+    update_video_metadata, StoredVideos,
 };
+use chat::youtube::channel::monitor::{remove_channel_from_monitor, get_channel, add_channel_to_monitor};
 use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
 use misc::editor::get_theme::{get_theme, get_themes};
 use misc::editor::save_theme::save_theme;
@@ -30,7 +30,10 @@ fn extract_info(urls: Vec<Url>) -> HashMap<String, String> {
                 let mut map = HashMap::new();
                 map.insert("scheme".to_string(), url.scheme().to_string());
                 map.insert("host".to_string(), url.host().unwrap().to_string());
-                map.insert("fragment".to_string(), url.fragment().unwrap_or("").to_string());
+                map.insert(
+                    "fragment".to_string(),
+                    url.fragment().unwrap_or("").to_string(),
+                );
                 Some(map)
             } else {
                 None
@@ -54,7 +57,8 @@ pub fn run() {
                 let parsed_urls = extract_info(urls);
                 if let Some(url) = parsed_urls.get("host") {
                     if url == "twitch_link" {
-                        let args: Vec<&str> = parsed_urls.get("fragment").unwrap().split('&').collect();
+                        let args: Vec<&str> =
+                            parsed_urls.get("fragment").unwrap().split('&').collect();
                         twitch_auth(app, args);
                     }
                 }
@@ -107,6 +111,9 @@ pub fn run() {
             delete_video_from_db,
             update_video_metadata,
             update_video,
+            add_channel_to_monitor,
+            remove_channel_from_monitor,
+            get_channel,
             // Chat Start/Stop
             united_chat_init,
             united_chat_stop,

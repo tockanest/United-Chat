@@ -13,7 +13,7 @@ pub(crate) struct Theme {
     pub(crate) css_code: String,
 }
 
-#[tauri::command]   
+#[tauri::command]
 pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, String> {
     let theme_dirs = dirs::config_dir()
         .unwrap()

@@ -2,7 +2,7 @@ use crate::misc::editor::save_theme::ThemeState;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
-#[tauri::command]   
+#[tauri::command]
 pub(crate) async fn check_if_unsaved(
     current_theme_name: String,
     current_theme_html: String,
