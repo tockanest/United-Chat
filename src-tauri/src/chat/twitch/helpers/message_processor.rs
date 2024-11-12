@@ -1,4 +1,4 @@
-use crate::chat::twitch::auth::ImplicitGrantFlow;
+use crate::chat::twitch::auth::structs::ImplicitGrantFlow;
 use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
 use crate::chat::twitch::irc::UserInformationState;
 use crate::chat::websocket::ws_server::WebSocketServer;
@@ -6,7 +6,6 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tauri::State;
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -31,7 +30,7 @@ pub(crate) struct TwitchResponse {
 pub(crate) async fn message_processor(
     msg: String,
     ws_server: &WebSocketServer,
-    auth_state: State<'_, ImplicitGrantFlow>,
+    auth_state: &ImplicitGrantFlow,
     user_information: UserInformationState,
 ) {
     let msg = msg.to_string();
@@ -101,7 +100,7 @@ pub(crate) async fn message_processor(
 
         match &user_information {
             UserInformationState::Regular(user_info) => {
-                let badges = get_chat_badges(auth_state.clone(), user_info).await;
+                let badges = get_chat_badges(&auth_state.clone(), user_info).await;
 
                 let mut user_badges: Vec<String> = Vec::new();
                 for badge_set in badges.data {

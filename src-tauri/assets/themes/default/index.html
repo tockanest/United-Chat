@@ -1,5 +1,4 @@
-pub(crate) fn default() -> String {
-    r#"<!-- You can use the most common bindings on this editor -->
+<!-- You can use the most common bindings on this editor -->
 <!-- As an example: "CRTL + /" creates this comment line -->
 <!-- You can use common CSS inline styling OR Tailwindcss, it's up to you. -->
 <!-- For Tailwind, refer to this documentation: https://tailwindcss.com/docs -->
@@ -81,38 +80,4 @@ pub(crate) fn default() -> String {
     4. **`text-ellipsis`**:
        - **Purpose**: Adds an ellipsis (`...`) if the content is too long to fit within the container.
        - **Why It’s Important**: Although `break-words` and `overflow-hidden` manage most of the overflow issues, `text-ellipsis` acts as a safety net, ensuring that if any text does somehow exceed its container, it’s truncated gracefully with an ellipsis.
--->"#.to_string()
-}
-
-pub(crate) fn sakura() -> String {
-    r#"<div id={id} class="flex flex-col items-start max-w-xs font-sans p-2">
-    <div class="flex items-center mb-2 ml-2">
-        <div class="flex items-center bg-gradient-to-r from-pink-200 to-pink-300 px-3 py-1 rounded-full shadow-sm">
-            <span class="text-sm font-bold text-pink-700 tracking-wide">{user}</span>
-        </div>
-        <div class="flex ml-2 space-x-1">
-            {platform}
-            {badges}
-        </div>
-    </div>
-    <div class="relative bg-gradient-to-br from-pink-100 to-pink-200 text-gray-800 px-4 py-3 rounded-2xl border-2 border-pink-300 shadow-md min-w-[300px] max-w-[600px]">
-        <div class="absolute left-4 top-0 transform -translate-y-1/2 rotate-45 w-3 h-3 bg-pink-100 border-l-2 border-t-2 border-pink-300"></div>
-        <p class="text-sm leading-snug">
-            {formatedMessage}
-        </p>
-        <div class="absolute -bottom-2 -right-2 text-pink-400">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 class="lucide lucide-cherry">
-                <path d="M2 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/>
-                <path d="M12 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/>
-                <path d="M7 14c3.22-2.91 4.29-8.75 5-12 1.66 2.38 4.94 9 5 12"/>
-                <path d="M22 9c-4.29 0-7.14-2.33-10-7 5.71 0 10 4.67 10 7Z"/>
-            </svg>
-        </div>
-    </div>
-    <div class="text-xs text-gray-500 mt-1 ml-4">
-        2:30 PM
-    </div>
-</div>"#.to_string()
-}
+-->

@@ -1,42 +1,48 @@
+use crate::misc::qol::database::state::DatabaseState;
 use keyring::Entry;
 use std::fs;
 use tauri::{AppHandle, Manager, WebviewWindowBuilder};
+use tracing::{error, info};
 
 #[tauri::command]
-pub(crate) async fn twitch_linking(app: AppHandle) {
-    fn get_password(service: &str, username: &str) -> Result<String, keyring::Error> {
-        let entry = Entry::new(service, username)?;
-        entry.get_password()
-    }
+pub async fn twitch_linking(app: AppHandle) -> Result<(), String> {
+    info!("Starting Twitch unlinking process");
 
-    match get_password("united-chat", "twitch-auth") {
-        Ok(_auth) => {
-            // Remove the password from the keyring if any
-            let entry = Entry::new("united-chat", "twitch-auth").unwrap();
-            entry.delete_credential().unwrap();
-        }
-        Err(e) => {
-            println!("Error: {}", e);
+    // Handle keyring cleanup
+    if let Ok(entry) = Entry::new("united-chat", "twitch-noauth") {
+        if let Err(e) = entry.delete_credential() {
+            error!("Failed to delete credential: {}", e);
         }
     }
 
-    // Remove the configuration file
-    let path = dirs::config_dir().unwrap().join("United Chat");
-    if !path.exists() {
-        fs::create_dir_all(&path).expect("Failed to create directory");
-    }
-
+    // Clean up configuration file
+    let path = dirs::config_dir()
+        .ok_or("Failed to get config directory")?
+        .join("United Chat");
     let user_file = path.join("twitch-auth.json");
-    // Delete the file
-    fs::remove_file(user_file).expect("Failed to remove file");
+    if user_file.exists() {
+        fs::remove_file(&user_file).map_err(|e| e.to_string())?;
+    }
 
-    // Stop the main window and show the splashscreen
-    let window = app.get_webview_window("main").unwrap();
-    window.close().unwrap();
+    // Reinitialize database
+    let db_state = app.state::<DatabaseState>();
+    if let Err(e) = db_state.0.reinitialize().await {
+        error!("Database reinitialization failed: {}", e);
+        return Err(format!("Database reinitialization failed: {}", e));
+    }
 
-    // Reopen the splashscreen window to show the linking button
+    // Handle window management
+    info!("Managing windows");
+    if let Some(main_window) = app.get_webview_window("main") {
+        main_window.close().map_err(|e| e.to_string())?;
+    }
+
+    // Create new splashscreen window
     WebviewWindowBuilder::from_config(&app, &app.config().app.windows.get(0).unwrap().clone())
-        .unwrap()
+        .map_err(|e| e.to_string())?
         .build()
-        .unwrap();
+        .map_err(|e| e.to_string())?;
+
+    info!("Twitch unlinking process completed");
+    Ok(())
 }

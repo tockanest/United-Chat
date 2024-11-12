@@ -9,7 +9,8 @@
 		"start": "next start",
 		"lint": "next lint",
 		"tauri": "tauri",
-		"tauri:dev": "tauri dev",
+		"set-dev": "set RUST_BACKTRACE=1",
+		"tauri:dev": "npm run set-dev && tauri dev",
 		"tauri:build": "tauri build"
 	},
 	"dependencies": {

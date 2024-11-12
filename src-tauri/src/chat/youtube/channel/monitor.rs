@@ -1,11 +1,11 @@
-use regex::Regex;
+use crate::chat::youtube::video_functions::HTTP_CLIENT;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::time::{interval, Duration};
-use crate::chat::youtube::video_functions::HTTP_CLIENT;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ChannelInfo {
@@ -147,14 +147,14 @@ impl ChannelMonitor {
                                             super::super::polling::get_video_cmd(
                                                 video.video_id.clone(),
                                             )
-                                            .await
+                                                .await
                                         {
                                             let _ =
                                                 super::super::state_manager::store_new_livestream(
                                                     video_info,
                                                     app_handle.clone(),
                                                 )
-                                                .await;
+                                                    .await;
                                         }
                                     }
                                 }
@@ -176,18 +176,16 @@ impl ChannelMonitor {
 
 #[tauri::command]
 pub(crate) async fn get_channel(channel_id: String) -> Result<ChannelInfo, String> {
-    if(channel_id.contains("@")) {
+    if channel_id.contains("@") {
         let url = format!("https://www.youtube.com/{}", channel_id);
         let response = HTTP_CLIENT.get(&url).send().await.map_err(|e| e.to_string())?;
 
         // Scrape from the HTML the identifier
-        let textDoc = response.text().await.map_err(|e| e.to_string())?;
-        
-        println!("{}", textDoc);
-        
-        Ok(ChannelInfo::default())
+        let text_doc = response.text().await.map_err(|e| e.to_string())?;
+
+        println!("{}", text_doc);
     };
-    
+
     Ok(ChannelInfo::default())
 }
 

@@ -1,79 +1,91 @@
-use crate::misc::editor::default_themes::{default, sakura};
-use crate::misc::editor::save_theme::ThemeState;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct Theme {
-    pub(crate) name: String,
-    pub(crate) html_code: String,
-    pub(crate) css_code: String,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Theme {
+    pub name: String,
+    pub html_code: String,
+    pub css_code: String,
 }
 
-#[tauri::command]
-pub(crate) async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, String> {
-    let theme_dirs = dirs::config_dir()
-        .unwrap()
+pub struct ThemeState {
+    pub themes: Vec<(String, PathBuf, PathBuf)>,
+}
+
+impl Theme {
+    pub fn new(name: String, html_code: String, css_code: String) -> Self {
+        Self {
+            name,
+            html_code,
+            css_code,
+        }
+    }
+}
+
+// Function to initialize default themes at app startup
+pub fn initialize_default_themes(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let themes_path = dirs::config_dir()
+        .ok_or("Failed to get config directory")?
         .join("United Chat")
         .join("themes");
 
-    let default_theme = default();
-    let sakura_theme = sakura();
+    // Create themes directory if it doesn't exist
+    if !themes_path.exists() {
+        std::fs::create_dir_all(&themes_path)?;
 
-    let mut themes = HashMap::new();
-    themes.insert("default".to_string(), default_theme.clone());
-    themes.insert("sakura".to_string(), sakura_theme.clone());
+        // Initialize default themes
+        let default_themes = [
+            ("default", include_str!("../../../assets/themes/default/index.html"), include_str!("../../../assets/themes/default/style.css")),
+            ("sakura", include_str!("../../../assets/themes/sakura/index.html"), include_str!("../../../assets/themes/sakura/style.css")),
+        ];
 
-    if !theme_dirs.exists() {
-        // Create all themes on the hashmap
+        for (theme_name, html_content, css_content) in default_themes {
+            let theme_dir = themes_path.join(theme_name);
+            std::fs::create_dir_all(&theme_dir)?;
 
-        std::fs::create_dir_all(&theme_dirs).unwrap();
-        for (name, _theme) in themes {
-            let theme_path = theme_dirs.join(name);
-            std::fs::create_dir_all(&theme_path).unwrap();
-
-            let mut file = std::fs::File::create(theme_path.join("index.html")).unwrap();
-            file.write_all("".as_bytes()).unwrap();
-
-            let mut css_file = std::fs::File::create(theme_path.join("style.css")).unwrap();
-            css_file.write_all("".as_bytes()).unwrap();
+            std::fs::write(theme_dir.join("index.html"), html_content)?;
+            std::fs::write(theme_dir.join("style.css"), css_content)?;
         }
     }
 
-    match theme.as_str() {
-        "default" => Ok(Theme {
-            name: "default".to_string(),
-            html_code: default_theme,
-            css_code: "".to_string(),
-        }),
-        "sakura" => Ok(Theme {
-            name: "sakura".to_string(),
-            html_code: sakura_theme,
-            css_code: "".to_string(),
-        }),
-        _ => {
-            let state = app.state::<Mutex<ThemeState>>();
-            let theme_state = state.lock().unwrap();
+    // Initialize ThemeState
+    let themes = std::fs::read_dir(&themes_path)?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_dir())
+        .map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let html_path = entry.path().join("index.html");
+            let css_path = entry.path().join("style.css");
+            (name, html_path, css_path)
+        })
+        .collect();
 
-            let theme = theme_state.themes.iter().find(|(name, _, _)| name == &theme);
+    app.manage(Mutex::new(ThemeState { themes }));
+    Ok(())
+}
 
-            match theme {
-                Some((_, html_path, css_path)) => {
-                    let html_code = std::fs::read_to_string(html_path).unwrap();
-                    let css_code = std::fs::read_to_string(css_path).unwrap();
-                    Ok(Theme {
-                        name: theme.unwrap().0.clone(),
-                        html_code,
-                        css_code,
-                    })
-                }
-                None => Err("Theme not found".into())
-            }
-        }
-    }
+#[tauri::command]
+pub async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, String> {
+    let state = app.state::<Mutex<ThemeState>>();
+    let theme_state = state.lock().unwrap();
+
+    let theme_entry = theme_state.themes.iter()
+        .find(|(name, _, _)| name == &theme)
+        .ok_or("Theme not found")?;
+
+    let html_code = std::fs::read_to_string(&theme_entry.1)
+        .map_err(|e| e.to_string())?;
+    let css_code = std::fs::read_to_string(&theme_entry.2)
+        .map_err(|e| e.to_string())?;
+
+    Ok(Theme {
+        name: theme_entry.0.clone(),
+        html_code,
+        css_code,
+    })
 }
 
 #[tauri::command]

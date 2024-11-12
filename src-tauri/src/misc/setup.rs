@@ -1,16 +1,17 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
+use crate::chat::twitch::auth::structs::{ImplicitGrantFlow, UserInformation, UserInformationState, UserSkippedInformation};
 use crate::chat::youtube::state_manager::get_all_videos;
-use crate::misc::editor::get_theme::get_themes;
-use crate::misc::editor::save_theme::ThemeState;
+use crate::misc::editor::get_theme::initialize_default_themes;
+use crate::misc::qol::database::config::DatabaseConfig;
+use crate::misc::qol::database::manager::DatabaseManager;
+use crate::misc::qol::database::state::DatabaseState;
 use keyring::Entry;
 use serde_json::json;
-use sled::Db;
 use std::fs;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::task;
 
+#[derive(Default)]
 pub(crate) struct SetupState {
     pub(crate) frontend_task: bool,
     pub(crate) backend_task: bool,
@@ -21,32 +22,21 @@ fn get_password(service: &str, username: &str) -> Result<String, keyring::Error>
     entry.get_password()
 }
 
-fn get_database_path() -> PathBuf {
-    let path = dirs::config_dir().unwrap().join("United Chat").join("database");
-    if !path.exists() {
-        fs::create_dir_all(&path).expect("Failed to create directory");
-    }
-
-    path
-}
-
-pub(crate) fn initialize_database() -> Arc<Db> {
-    let db_path = get_database_path();
-    let db = sled::open(db_path).expect("Failed to open sled database");
-    Arc::new(db)
-}
-
 async fn backend_setup(app: AppHandle) {
-    let db = initialize_database();
-    app.manage(db);
+    let db_manager = DatabaseManager::new();
+    let config = DatabaseConfig::default();
+    db_manager.initialize(Some(config)).await.unwrap();
+    app.manage(DatabaseState::new(db_manager));
+
     let app_clone = app.clone();
+
 
     match get_password("united-chat", "twitch-auth") {
         Ok(auth) => {
             let parsed: ImplicitGrantFlow = serde_json::from_str(&auth).unwrap();
 
             // Manage state directly after parsing
-            app_clone.manage(ImplicitGrantFlow {
+            app_clone.manage(Mutex::new(ImplicitGrantFlow {
                 access_token: parsed.access_token,
                 scope: parsed.scope,
                 state: parsed.state,
@@ -54,7 +44,7 @@ async fn backend_setup(app: AppHandle) {
                 error: parsed.error,
                 error_description: parsed.error_description,
                 skipped: parsed.skipped,
-            });
+            }));
 
             let path = dirs::config_dir().unwrap().join("United Chat");
             if !path.exists() {
@@ -78,13 +68,22 @@ async fn backend_setup(app: AppHandle) {
             });
 
             // Manage the user information
-            app.manage(user.clone());
+            match app.try_state::<UserInformationState>() {
+                Some(state) => {
+                    let mut state = state
+                        .lock()
+                        .map_err(|e| format!("Failed to lock user state: {}", e)).unwrap();
+                    *state = user;
+                }
+                None => {
+                    app.manage(Mutex::new(user));
+                }
+            }
 
             task::spawn_blocking(move || {
                 let runtime = tokio::runtime::Runtime::new().unwrap();
                 runtime.block_on(setup_complete(
                     app.clone(),
-                    app.state::<Mutex<SetupState>>(),
                     "backend".to_string(),
                 ))
             });
@@ -96,12 +95,12 @@ async fn backend_setup(app: AppHandle) {
                     let parsed: UserSkippedInformation = serde_json::from_str(&auth).unwrap();
 
                     // Manage state directly after parsing
-                    app_clone.manage(UserSkippedInformation {
+                    app_clone.manage(Mutex::new(UserSkippedInformation {
                         full_channel_url: parsed.full_channel_url,
                         username: parsed.username,
-                    });
+                    }));
 
-                    app_clone.manage(ImplicitGrantFlow {
+                    app_clone.manage(Mutex::new(ImplicitGrantFlow {
                         access_token: "".to_string(),
                         scope: "".to_string(),
                         state: "".to_string(),
@@ -109,13 +108,12 @@ async fn backend_setup(app: AppHandle) {
                         error: Option::from("".to_string()),
                         error_description: Option::from("".to_string()),
                         skipped: Option::from(true),
-                    });
+                    }));
 
                     task::spawn_blocking(move || {
                         let runtime = tokio::runtime::Runtime::new().unwrap();
                         runtime.block_on(setup_complete(
                             app.clone(),
-                            app.state::<Mutex<SetupState>>(),
                             "backend".to_string(),
                         ))
                     });
@@ -129,12 +127,7 @@ async fn backend_setup(app: AppHandle) {
         }
     };
 
-    let themes = get_themes(app_clone.clone()).await.unwrap();
-    let to_manage = Mutex::new(ThemeState {
-        themes,
-    });
-    // Manage the theme state
-    app_clone.manage(to_manage);
+    initialize_default_themes(&app_clone).unwrap();
 
     get_all_videos(app_clone.clone(), Option::from(true), None).await.unwrap();
 }
@@ -142,10 +135,16 @@ async fn backend_setup(app: AppHandle) {
 #[tauri::command]
 pub(crate) async fn setup_complete(
     app: AppHandle,
-    state: State<'_, Mutex<SetupState>>,
     task: String,
 ) -> Result<(), ()> {
-    let mut state_lock = state.lock().unwrap();
+    let state = app.try_state::<Mutex<SetupState>>()
+        .expect("Setup state should be initialized");
+
+    // Even if poisoned, get the state and continue
+    let mut state_lock = state.lock().unwrap_or_else(|poisoned| {
+        println!("Recovering from poisoned state");
+        poisoned.into_inner()
+    });
 
     match task.as_str() {
         "frontend" => {
@@ -161,7 +160,8 @@ pub(crate) async fn setup_complete(
     }
 
     if state_lock.frontend_task && state_lock.backend_task {
-        let splash_window = app.get_webview_window("splashscreen").unwrap();
+        let splash_window = app.get_webview_window("splashscreen").and_then(|window| Some(window));
+        let splash_window = splash_window.unwrap();
         splash_window.close().unwrap();
 
         WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
@@ -172,6 +172,8 @@ pub(crate) async fn setup_complete(
             .unwrap();
     }
 
+    // Drop setup to prevent poisoning
     drop(state_lock);
+
     Ok(())
 }

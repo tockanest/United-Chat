@@ -1,4 +1,4 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation, UserSkippedInformation};
+use crate::chat::twitch::auth::structs::{ImplicitGrantFlowState, UserInformation, UserSkippedInformation};
 use crate::chat::twitch::helpers::message_processor::message_processor;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use futures::{SinkExt, StreamExt};
@@ -36,18 +36,21 @@ pub(crate) enum UserInformationState {
 
 // Command to create and start the WebSocket server
 pub(crate) async fn connect_twitch_websocket(app: AppHandle, stop_flag: Arc<AtomicBool>, ws_server: Arc<WebSocketServer>) {
-    let state = app.state::<ImplicitGrantFlow>();
+    let user_information = {
+        let get_state = app.state::<ImplicitGrantFlowState>();
+        let state = get_state.lock().unwrap();
 
-    let user_information = match state.skipped {
-        Some(true) => {
-            let skipped_state = Arc::new((*app.state::<UserSkippedInformation>()).clone());
-            UserInformationState::Skipped(skipped_state)
+        match state.skipped {
+            Some(true) => {
+                let skipped_state = Arc::new((*app.state::<UserSkippedInformation>()).clone());
+                UserInformationState::Skipped(skipped_state)
+            }
+            _ => {
+                let regular_state = Arc::new((*app.state::<UserInformation>()).clone());
+                UserInformationState::Regular(regular_state)
+            }
         }
-        _ => {
-            let regular_state = Arc::new((*app.state::<UserInformation>()).clone());
-            UserInformationState::Regular(regular_state)
-        }
-    };
+    }; // MutexGuard is dropped here
 
     let (mut ws_stream, _) = connect_async("wss://irc-ws.chat.twitch.tv:443")
         .await
@@ -82,7 +85,12 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle, stop_flag: Arc<Atom
                             }
                         }
                     } else if msg.to_string().contains("PRIVMSG") {
-                        message_processor(msg.to_string(), ws_server.clone().deref(), state.clone(), user_information.clone()).await;
+                        let state = {
+                            let get_state = app.state::<ImplicitGrantFlowState>();
+                            let state = get_state.lock().unwrap().clone();
+                            state
+                        };
+                        message_processor(msg.to_string(), ws_server.clone().deref(), &state.clone(), user_information.clone()).await;
                     }
                 } else {
                     // Handle disconnection or error

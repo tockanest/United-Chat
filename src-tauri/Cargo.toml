@@ -34,11 +34,17 @@ tauri-plugin-deep-link = "2.0.0-rc.5"
 url = "2.5.2"
 dirs = "5.0.1"
 tauri-plugin-localhost = "2.0.0-rc.0"
-sled = "0.34.7"
+sled = { version = "0.34.7", features = ["compression"] }
 lazy_static = "1.4"
 lru = "0.12"
 roxmltree = "0.20.0"
 tempfile = "3.14.0"
+backtrace = "0.3.74"
+parking_lot = "0.12.3"
+tracing = "0.1.40"
+uuid = "1.10.0"
+thiserror = "1.0.63"
+anyhow = "1.0.88"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { version = "2.0.0-rc.3", features = ["deep-link"] }

@@ -1,27 +1,80 @@
 mod chat;
 mod misc;
 
-use crate::chat::initialize::{united_chat_init, united_chat_stop, UnitedChat};
-use crate::chat::twitch::auth::twitch_auth;
-use crate::chat::twitch::get_user::get_user;
-use crate::misc::qol::linking_ais::twitch_linking;
-use chat::twitch::auth::{skip_twitch_auth, start_twitch_link, twitch_deauth};
-use chat::youtube::polling::{get_live_chat_cmd, get_video_cmd};
-use chat::youtube::state_manager::{
-    delete_video_from_db, get_all_videos, get_video_from_db, store_new_livestream, update_video,
-    update_video_metadata, StoredVideos,
+// Standard library imports
+use std::{
+    collections::HashMap,
+    sync::Mutex,
 };
-use chat::youtube::channel::monitor::{remove_channel_from_monitor, get_channel, add_channel_to_monitor};
-use misc::editor::get_app_url::{hide_webchat_window, open_webchat_window};
-use misc::editor::get_theme::{get_theme, get_themes};
-use misc::editor::save_theme::save_theme;
-use misc::qol::check_if_unsaved::check_if_unsaved;
-use misc::setup::{setup_complete, SetupState};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use tauri::{Listener, Manager, WebviewUrl, WebviewWindowBuilder};
+
+// External crate imports
+use tauri::{
+    WebviewUrl,
+    WebviewWindowBuilder,
+};
 use tauri_plugin_deep_link::DeepLinkExt;
 use url::Url;
+
+// Internal chat module imports
+use crate::chat::{
+    initialize::{
+        united_chat_init,
+        united_chat_stop,
+        UnitedChat,
+    },
+    twitch::{
+        auth::{
+            link::twitch_auth,
+            skip::link_process,
+            start::linking,
+            unlink::twitch,
+        },
+        get_user::get_user,
+    },
+    youtube::{
+        channel::monitor::{
+            add_channel_to_monitor,
+            get_channel,
+            remove_channel_from_monitor,
+        },
+        polling::{
+            get_live_chat_cmd,
+            get_video_cmd,
+        },
+        state_manager::{
+            delete_video_from_db,
+            get_all_videos,
+            get_video_from_db,
+            store_new_livestream,
+            update_video,
+            update_video_metadata,
+            StoredVideos,
+        },
+    },
+};
+
+// Internal misc module imports
+use crate::misc::{
+    editor::{
+        get_app_url::{
+            hide_webchat_window,
+            open_webchat_window,
+        },
+        get_theme::{
+            get_theme,
+            get_themes,
+        },
+        save_theme::save_theme,
+    },
+    qol::{
+        check_if_unsaved::check_if_unsaved,
+        linking_ais::twitch_linking,
+    },
+    setup::{
+        setup_complete,
+        SetupState,
+    },
+};
 
 fn extract_info(urls: Vec<Url>) -> HashMap<String, String> {
     urls.into_iter()
@@ -51,7 +104,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let deep = app.deep_link().get_current().unwrap();
             if let Some(urls) = deep {
                 let parsed_urls = extract_info(urls);
@@ -59,16 +112,13 @@ pub fn run() {
                     if url == "twitch_link" {
                         let args: Vec<&str> =
                             parsed_urls.get("fragment").unwrap().split('&').collect();
-                        twitch_auth(app, args);
+                        let _ = twitch_auth(app, args);
                     }
                 }
             }
         }))
         .plugin(tauri_plugin_localhost::Builder::new(9889).build())
-        .manage(Mutex::new(SetupState {
-            frontend_task: false,
-            backend_task: false,
-        }))
+        .manage(Mutex::new(SetupState::default()))
         .manage(Mutex::new(StoredVideos::default()))
         .manage(UnitedChat::default())
         .setup(|app| {
@@ -89,10 +139,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             setup_complete,
-            // Twitch
-            start_twitch_link,
-            skip_twitch_auth,
-            twitch_deauth,
+            linking,
+            link_process,
+            twitch,
             get_user,
             // Editor
             get_theme,

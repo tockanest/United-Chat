@@ -14,6 +14,7 @@ export default function UnitedChat() {
 
 	useEffect(() => {
 		Tauri.GetUserInformation().then((user) => {
+			console.log(user)
 			if (user) {
 				setUser(user)
 			}

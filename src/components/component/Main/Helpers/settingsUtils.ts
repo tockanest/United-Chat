@@ -66,7 +66,7 @@ async function handleAddNewChannel(
         url = url.replace('channel/', '');
     }
 
-    console.log(url);
+    await TauriApi.GetChannel(url);
 }
 
 async function handleAddNewLive(

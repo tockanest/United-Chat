@@ -29,6 +29,7 @@
 	},
 	"bundle": {
 		"active": true,
+		"resources": ["./assets/**/*"],
 		"targets": "all",
 		"icon": [
 			"icons/256x256.png",

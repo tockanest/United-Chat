@@ -4,3 +4,4 @@ pub(crate) mod check_if_unsaved;
 pub(crate) mod error_handling;
 #[macro_use]
 pub(crate) mod linking_ais;
+pub(crate) mod database;

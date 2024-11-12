@@ -1,12 +1,12 @@
 use crate::chat::youtube::polling::{get_video_cmd, VideoInfo};
+use crate::misc::qol::database::manager::DatabaseManager;
+use crate::misc::qol::database::state::DatabaseState;
 use lazy_static::lazy_static;
 use lru::LruCache;
 use serde::{Deserialize, Serialize};
-use sled::Db;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::ops::Deref;
-use std::sync::Arc;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
@@ -17,7 +17,9 @@ pub(crate) struct StoredVideos {
 
 #[tauri::command]
 pub(crate) async fn store_new_livestream(data: VideoInfo, app: AppHandle) -> Result<bool, String> {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseManager>();
+    let db = db.get_db().await.unwrap().deref().clone();
+
     let video_id = data.video_id.clone().unwrap();
     let serialized_data = serde_json::to_vec(&data).map_err(|e| e.to_string())?;
 
@@ -46,7 +48,8 @@ pub(crate) async fn get_video_from_db(id: String, app: AppHandle) -> Result<Vide
         return Ok(video_info.clone());
     }
 
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseManager>();
+    let db = db.get_db().await.unwrap().deref().clone();
 
     match db.get(&id) {
         Ok(Some(video)) => {
@@ -69,7 +72,9 @@ pub(crate) async fn get_all_videos(
     update_status: Option<bool>,
     max_retries: Option<usize>,
 ) -> Result<Vec<VideoInfo>, String> {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseState>();
+    let db = db.0.get_db().await.unwrap().deref().clone();
+
     max_retries.unwrap_or(3);
     let mut videos = Vec::new();
     let mut to_remove = Vec::new();
@@ -134,7 +139,8 @@ pub(crate) async fn get_all_videos(
 
 #[tauri::command]
 pub(crate) async fn delete_video_from_db(id: String, app: AppHandle) -> Result<bool, String> {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseManager>();
+    let db = db.get_db().await.unwrap().deref().clone();
 
     if db.contains_key(&id).unwrap() {
         db.remove(&id).unwrap();
@@ -147,7 +153,9 @@ pub(crate) async fn delete_video_from_db(id: String, app: AppHandle) -> Result<b
 
 #[tauri::command]
 pub(crate) async fn update_video_metadata(video: VideoInfo, app: AppHandle) {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseManager>();
+    let db = db.get_db().await.unwrap().deref().clone();
+
     let video_id = video.video_id.clone().unwrap();
     let serialized_data = serde_json::to_vec(&video).unwrap();
 
@@ -157,7 +165,9 @@ pub(crate) async fn update_video_metadata(video: VideoInfo, app: AppHandle) {
 
 #[tauri::command]
 pub(crate) async fn update_video(id: String, app: AppHandle) {
-    let db: Arc<Db> = app.state::<Arc<Db>>().deref().clone();
+    let db = app.state::<DatabaseManager>();
+    let db = db.get_db().await.unwrap().deref().clone();
+
     let video = db.get(id.clone()).unwrap().unwrap();
     let video_info: VideoInfo = serde_json::from_slice(&video).unwrap();
 

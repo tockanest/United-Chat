@@ -1,8 +1,7 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
+use crate::chat::twitch::auth::structs::{ImplicitGrantFlow, UserInformation};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::State;
 
 pub(crate) fn parse_twitch_message(message: &str) -> Option<(String, String, String)> {
     let re = Regex::new(r"@(?P<tags>[^ ]*) (?P<username>[^!]+)!.* PRIVMSG #[^ ]* :(?P<message>.*)")
@@ -62,7 +61,7 @@ pub(crate) struct TwitchBadgesResponse {
 }
 
 pub(crate) async fn get_chat_badges(
-    auth_state: State<'_, ImplicitGrantFlow>,
+    auth_state: &ImplicitGrantFlow,
     user_state: &Arc<UserInformation>,
 ) -> TwitchBadgesResponse {
     let client = reqwest::Client::new();

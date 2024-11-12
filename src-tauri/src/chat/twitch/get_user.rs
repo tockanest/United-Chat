@@ -1,22 +1,24 @@
-use crate::chat::twitch::auth::{ImplicitGrantFlow, UserInformation};
-use std::ops::Deref;
+use crate::chat::twitch::auth::structs::{ImplicitGrantFlowState, UserInformation, UserInformationState};
 use tauri::{AppHandle, Manager};
 
 #[tauri::command]
-pub(crate) async fn get_user(app: AppHandle) -> Result<UserInformation, String> {
-    let state = app.state::<ImplicitGrantFlow>();
+pub(crate) fn get_user(app: AppHandle) -> Result<UserInformation, String> {
+    let state = app.state::<ImplicitGrantFlowState>();
+    let state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    // Check if the setup was skipped by checking the "skipped" flag on the state: skipped: Option<bool>
-    if let Some(skipped) = state.skipped {
-        if !skipped {
-            let user_state = app.state::<UserInformation>();
-            // Retrieve from state the user information
-            let user_information = user_state.deref().clone();
+    println!("{:?}", state);
+
+    match state.skipped {
+        Some(skipped) if !skipped => {
+            let user_state = app.state::<UserInformationState>();
+            // Get the user information from the mutex
+            let user_information = user_state
+                .lock()
+                .map_err(|e| format!("Failed to lock user state: {}", e))?
+                .clone();
             Ok(user_information)
-        } else {
-            Err("Setup was skipped, there's no user linked.".into())
         }
-    } else {
-        Err("Twitch auth not found".into())
+        Some(_) => Err("Setup was skipped, there's no user linked.".into()),
+        None => Err("Twitch auth not found".into()),
     }
 }

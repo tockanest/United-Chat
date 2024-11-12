@@ -10,7 +10,7 @@ export default class TauriApi {
 	 * @returns {Promise<string>} A promise that resolves to a string containing the linking URL.
 	 */
 	public static async StartLinking(): Promise<string> {
-		return await this.command<string>("start_twitch_link", {
+		return await this.command<string>("linking", {
 			clientId: "h3yvglc6y3kmtrzyq7it20z7vi5sa2",
 			scopes: "user:read:chat+user:read:email"
 		});
@@ -21,7 +21,7 @@ export default class TauriApi {
 	 * @returns {Promise<void>} A promise that resolves when the logout is complete.
 	 */
 	public static async Logout(): Promise<void> {
-		return await this.command<void>("twitch_deauth", {});
+		return await this.command<void>("twitch", {});
 	}
 
 	/**
@@ -31,7 +31,7 @@ export default class TauriApi {
 	 * @returns {Promise<boolean>} A promise that resolves to a boolean indicating success or failure.
 	 */
 	public static async SkipLinking(fullUrl: string, username: string): Promise<boolean> {
-		return await this.command<boolean>("skip_twitch_auth", {fullUrl, username});
+		return await this.command<boolean>("link_process", {fullUrl, username});
 	}
 
 	/**
@@ -214,6 +214,9 @@ export default class TauriApi {
 	}
 
 	/** Youtube Process */
+	public static async GetChannel(id: string) {
+		return await this.command<unknown>("get_channel", {id});
+	}
 
 	public static async GetVideo(url: string) {
 		// Should follow: https://www.youtube.com/watch?v={id}

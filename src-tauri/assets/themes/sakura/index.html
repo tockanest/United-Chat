@@ -1,0 +1,270 @@
+<!--
+  Chat Message Component Documentation
+  ===================================
+
+  Overview:
+  - Modern chat message interface with gradient aesthetics
+  - Responsive design with flexible width constraints
+  - Modular structure for easy customization
+  - Support for platform badges and user indicators
+
+  Key Features:
+  - Username badge with gradient background
+  - Chat bubble design with pointer
+  - Message container with gradient background
+  - Timestamp display
+  - Decorative elements
+  - Kinda cute cherry icon
+
+  Customization Guide:
+  1. Color Themes
+     - Replace pink colors with any Tailwind color
+     - Example for blue theme:
+       from-blue-200 to-blue-300
+       from-blue-100 to-blue-200
+       border-blue-300
+
+  2. Layout Modifications
+     - Compact: Reduce padding and margins
+       px-2 py-1 instead of px-3 py-1
+       max-w-xs instead of min-w-[300px]
+
+     - Expanded: Increase spacing
+       px-6 py-4 instead of px-4 py-3
+       max-w-2xl instead of max-w-[600px]
+
+  3. Visual Weight
+     - Lighter: Reduce shadows and borders
+       shadow-sm border instead of shadow-md border-2
+
+     - Heavier: Increase shadows and borders
+       shadow-lg border-2 instead of shadow-md border
+
+  4. Typography Adjustments
+        - Larger Text: Increase font size
+        text-base instead of text-sm
+        leading-relaxed instead of leading-snug
+
+        - Smaller Text: Decrease font size
+        text-xs instead of text-sm
+        leading-tight instead of leading-snug
+-->
+
+<!--
+  Root Container
+  =============
+  Purpose: Main container establishing layout system
+
+  Customization Options:
+  - Width: max-w-xs (320px) | max-w-sm (384px) | max-w-md (448px)
+  - Layout: items-start (left-aligned) | items-stretch (full-width)
+  - Spacing: p-2 (default) | p-1 (compact) | p-4 (spacious)
+
+  Example Modifications:
+  <div class="flex flex-col items-stretch w-full font-sans p-4">  // Full-width
+  <div class="flex flex-col items-start max-w-md font-sans p-1">  // Compact
+-->
+<div id={id} class="flex flex-col items-start max-w-xs font-sans p-2">
+
+    <!--
+      User Information Section
+      =======================
+      Purpose: Contains username badge and platform indicators
+
+      Structure:
+      1. Username Badge Container
+      2. Platform/Badges Container
+
+      Customization Options:
+      - Spacing: mb-2 (vertical) | ml-2 (horizontal)
+      - Alignment: items-center (centered) | items-start (top)
+
+      Example Modifications:
+      <div class="flex items-start mb-1 ml-1">  // Compact
+      <div class="flex items-center mb-3 ml-3">  // Spacious
+    -->
+    <div class="flex items-center mb-2 ml-2">
+
+        <!--
+          Username Badge
+          =============
+          Purpose: Displays user identity with visual emphasis
+
+          Styling Components:
+          - Background: Horizontal gradient (bg-gradient-to-r)
+          - Colors: from-pink-200 to-pink-300
+          - Shape: rounded-full for pill shape
+          - Shadow: shadow-sm for subtle depth
+
+          Example Modifications:
+          1. Solid Color:
+          <div class="flex items-center bg-pink-300 px-3 py-1 rounded-full shadow-sm">
+
+          2. Different Gradient:
+          <div class="flex items-center bg-gradient-to-br from-pink-200 to-pink-300 px-3 py-1 rounded-full shadow-sm">
+
+          3. With Border:
+          <div class="flex items-center bg-gradient-to-r from-pink-200 to-pink-300 px-3 py-1 rounded-full shadow-md border border-pink-400">
+        -->
+        <div class="flex items-center bg-gradient-to-r from-pink-200 to-pink-300 px-3 py-1 rounded-full shadow-sm">
+            <span class="text-sm font-bold text-pink-700 tracking-wide">{user}</span>
+        </div>
+
+        <!--
+          Platform and Badges Container
+          ===========================
+          Purpose: Displays platform indicators and user badges
+
+          Layout:
+          - Horizontal flex container
+          - Left margin for spacing from username
+          - Space between items
+
+          Customization:
+          - Spacing: space-x-1 (default) | space-x-2 (more space)
+          - Alignment: items-center (vertical centering)
+        -->
+        <div class="flex ml-2 space-x-1">
+            {platform}
+            {badges}
+        </div>
+    </div>
+
+    <!--
+      Message Bubble Container
+      =======================
+      Purpose: Main message content container
+
+      Key Features:
+      1. Gradient Background
+         - Direction: bottom-right (bg-gradient-to-br)
+         - Colors: from-pink-100 to-pink-200
+
+      2. Border and Shadow
+         - Border: border-2 border-pink-300
+         - Shadow: shadow-md for depth
+
+      3. Size Constraints
+         - Minimum: min-w-[300px]
+         - Maximum: max-w-[600px]
+
+      Example Modifications:
+      1. Solid Background:
+      <div class="relative bg-pink-100 text-gray-800 px-4 py-3 rounded-2xl border-2 border-pink-300 shadow-md">
+
+      2. Softer Appearance:
+      <div class="relative bg-gradient-to-br from-pink-50 to-pink-100 text-gray-800 px-4 py-3 rounded-3xl border border-pink-200 shadow-sm">
+
+      3. Dark Theme:
+      <div class="relative bg-gradient-to-br from-gray-700 to-gray-800 text-white px-4 py-3 rounded-2xl border-2 border-gray-600 shadow-md">
+    -->
+    <div class="relative bg-gradient-to-br from-pink-100 to-pink-200 text-gray-800 px-4 py-3 rounded-2xl border-2 border-pink-300 shadow-md min-w-[300px] max-w-[600px]">
+
+        <!--
+          Chat Bubble Pointer
+          ==================
+          Purpose: Creates speech bubble effect
+
+          Technique:
+          - Absolute positioning relative to message container
+          - 45-degree rotation for pointer effect
+          - Matched background and border with message container
+
+          Modifications:
+          1. Size: w-3 h-3 (default) | w-4 h-4 (larger) | w-2 h-2 (smaller)
+          2. Position: left-4 (default) | right-4 (right-aligned)
+          3. Border: border-l-2 border-t-2 (default) | border-l border-t (softer)
+        -->
+        <div class="absolute left-4 top-0 transform -translate-y-1/2 rotate-45 w-3 h-3 bg-pink-100 border-l-2 border-t-2 border-pink-300"></div>
+
+        <!--
+          Message Text
+          ============
+          Purpose: Displays the message content
+
+          Typography:
+          - Size: text-sm (default) | text-base (larger) | text-xs (smaller)
+          - Line height: leading-snug (default) | leading-relaxed (more space)
+
+          Example Modifications:
+          <p class="text-base leading-relaxed">  // Larger text
+          <p class="text-xs leading-tight">      // Compact text
+          <p class="text-sm leading-snug font-medium">  // Emphasized
+        -->
+        <p class="text-sm leading-snug">
+            {formatedMessage}
+        </p>
+
+        <!--
+          Decorative Cherry Icon
+          =====================
+          Purpose: Visual enhancement
+
+          Positioning:
+          - Absolute positioning outside bubble
+          - Negative margins for overlap effect
+
+          Customization:
+          - Size: width/height attributes
+          - Color: text-pink-400 class
+          - Position: -bottom-2 -right-2 classes
+        -->
+        <div class="absolute -bottom-2 -right-2 text-pink-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 class="lucide lucide-cherry">
+                <path d="M2 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/>
+                <path d="M12 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/>
+                <path d="M7 14c3.22-2.91 4.29-8.75 5-12 1.66 2.38 4.94 9 5 12"/>
+                <path d="M22 9c-4.29 0-7.14-2.33-10-7 5.71 0 10 4.67 10 7Z"/>
+            </svg>
+        </div>
+    </div>
+
+    <!--
+      Timestamp
+      =========
+      Purpose: Displays message time
+
+      Styling:
+      - Size: text-xs for small text
+      - Color: text-gray-500 for subtle appearance
+      - Spacing: mt-1 ml-4 for positioning
+
+      Modifications:
+      1. More prominent:
+      <div class="text-sm text-gray-600 mt-2 ml-4">
+
+      2. More subtle:
+      <div class="text-xs text-gray-400 mt-0.5 ml-4">
+
+      3. Different position:
+      <div class="text-xs text-gray-500 mt-1 mr-4 text-right">
+    -->
+    <div class="text-xs text-gray-500 mt-1 ml-4">
+        2:30 PM
+    </div>
+</div>
+
+<!--
+  Template Variables Guide
+  =======================
+  {id}              - Unique component identifier
+  {user}            - Username for display
+  {platform}        - Platform indicator component
+  {badges}          - User badges component
+  {formatedMessage} - Formatted message content
+
+  Performance Optimizations:
+  1. Minimal DOM nesting
+  2. Efficient use of Tailwind utilities
+  3. SVG optimization
+  4. Controlled reflow through width constraints
+
+  Component Features:
+  1. Responsive design
+  2. Customizable appearance
+  3. Modular structure
+  4. Platform/badge support
+  5. Timestamp display
+-->
