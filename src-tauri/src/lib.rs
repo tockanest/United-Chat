@@ -32,10 +32,12 @@ use crate::chat::{
         get_user::get_user,
     },
     youtube::{
-        channel::monitor::{
-            add_channel_to_monitor,
-            get_channel,
-            remove_channel_from_monitor,
+        channel::manager::{
+            set_channel,
+            start_monitoring,
+            stop_monitoring,
+            get_current_channel,
+            update_channel_info
         },
         polling::{
             get_live_chat_cmd,
@@ -160,9 +162,12 @@ pub fn run() {
             delete_video_from_db,
             update_video_metadata,
             update_video,
-            add_channel_to_monitor,
-            remove_channel_from_monitor,
-            get_channel,
+            // Youtube Channel
+            set_channel,
+            start_monitoring,
+            stop_monitoring,
+            get_current_channel,
+            update_channel_info,
             // Chat Start/Stop
             united_chat_init,
             united_chat_stop,

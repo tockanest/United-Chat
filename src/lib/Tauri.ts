@@ -1,10 +1,10 @@
 export default class TauriApi {
 	private static eventSubscriptions = new Map<string, () => void>();
-
+	
 	/**
 	 * Twitch Linking Process
 	 */
-
+	
 	/**
 	 * Starts the Twitch linking process by invoking the `start_twitch_link` command.
 	 * @returns {Promise<string>} A promise that resolves to a string containing the linking URL.
@@ -15,7 +15,7 @@ export default class TauriApi {
 			scopes: "user:read:chat+user:read:email"
 		});
 	}
-
+	
 	/**
 	 * Logs out the user by invoking the `twitch_deauth` command.
 	 * @returns {Promise<void>} A promise that resolves when the logout is complete.
@@ -23,7 +23,7 @@ export default class TauriApi {
 	public static async Logout(): Promise<void> {
 		return await this.command<void>("twitch", {});
 	}
-
+	
 	/**
 	 * Skips the Twitch linking process by invoking the `skip_twitch_auth` command.
 	 * @param {string} fullUrl - The full URL for the Twitch authentication.
@@ -33,7 +33,7 @@ export default class TauriApi {
 	public static async SkipLinking(fullUrl: string, username: string): Promise<boolean> {
 		return await this.command<boolean>("link_process", {fullUrl, username});
 	}
-
+	
 	/**
 	 * Completes the frontend setup by invoking the `setup_complete` command.
 	 * @returns {Promise<boolean>} A promise that resolves to a boolean indicating success or failure.
@@ -41,7 +41,7 @@ export default class TauriApi {
 	public static async FinishFrontendSetup(): Promise<boolean> {
 		return await this.command<boolean>("setup_complete", {task: "frontend"});
 	}
-
+	
 	/**
 	 * Opens a URL in the default web browser.
 	 * @param {string} url - The URL to open.
@@ -57,15 +57,15 @@ export default class TauriApi {
 				return false;
 			}
 		}
-
+		
 		if (!isValidUrl(url)) {
 			throw new Error("Invalid URL");
 		}
-
+		
 		const {open} = await import("@tauri-apps/plugin-shell");
 		return await open(url);
 	}
-
+	
 	/**
 	 * Connects to the Twitch WebSocket by invoking the `connect_twitch_websocket` command.
 	 * @returns {Promise<void>} A promise that resolves when the connection is established.
@@ -81,10 +81,10 @@ export default class TauriApi {
 				youtube
 			})
 		}
-
+		
 		return await this.command<void>("united_chat_init", {});
 	}
-
+	
 	/**
 	 * Disconnects from the Twitch WebSocket by invoking the `ws_disconnect` command.
 	 * @returns {Promise<void>} A promise that resolves when the disconnection is complete.
@@ -92,7 +92,7 @@ export default class TauriApi {
 	public static async DisconnectTwitchWebsocket(): Promise<void> {
 		return await this.command<void>("united_chat_stop", {});
 	}
-
+	
 	/**
 	 * Opens a web chat window by invoking the `open_webchat_window` command.
 	 * @param {string} url - The URL of the web chat.
@@ -101,7 +101,7 @@ export default class TauriApi {
 	public static async OpenWebChatWindow(url: string): Promise<void> {
 		return await this.command<void>("open_webchat_window", {url});
 	}
-
+	
 	/**
 	 * Closes the web chat window by invoking the `hide_webchat_window` command.
 	 * @returns {Promise<void>} A promise that resolves when the window is closed.
@@ -109,7 +109,7 @@ export default class TauriApi {
 	public static async CloseWebChatWindow(): Promise<void> {
 		return await this.command<void>("hide_webchat_window", {});
 	}
-
+	
 	/**
 	 * Retrieves user information by invoking the `get_user` command.
 	 * @returns {Promise<UserInformation | null>} A promise that resolves to the user information or null if an error occurs.
@@ -122,7 +122,7 @@ export default class TauriApi {
 			return null;
 		}
 	}
-
+	
 	/**
 	 * Retrieves the editor theme by invoking the `get_theme` command.
 	 * @param {string} [theme="default"] - The name of the theme to retrieve.
@@ -140,7 +140,7 @@ export default class TauriApi {
 		}>("get_theme", {theme: theme});
 		return {name, html_code, css_code};
 	}
-
+	
 	/**
 	 * Retrieves the available themes by invoking the `get_themes` command.
 	 * @returns {Promise<AvailableThemes>} A promise that resolves to an array of available themes.
@@ -148,7 +148,7 @@ export default class TauriApi {
 	public static async GetAvailableThemes() {
 		return await this.command<AvailableThemes>("get_themes", {});
 	}
-
+	
 	/**
 	 * Saves a theme by invoking the `save_theme` command.
 	 * @param {string} themeName - The name of the theme to save.
@@ -159,11 +159,11 @@ export default class TauriApi {
 	public static async SaveTheme(themeName: string, htmlCode: string, cssCode: string) {
 		return await this.command<boolean>("save_theme", {themeName, htmlCode, cssCode});
 	}
-
+	
 	/**
 	 * Event Handling
 	 */
-
+	
 	/**
 	 * Listens for an event by invoking the `listen` function from the Tauri API.
 	 * @param {string} event - The name of the event to listen for.
@@ -175,7 +175,7 @@ export default class TauriApi {
 		const unsub = await listen(event, callback);
 		this.eventSubscriptions.set(event, unsub);
 	}
-
+	
 	/**
 	 * Listens for an event once by invoking the `once` function from the Tauri API.
 	 * @param {string} event - The name of the event to listen for.
@@ -186,7 +186,7 @@ export default class TauriApi {
 		const {once} = await import('@tauri-apps/api/event');
 		return await once(event, callback);
 	}
-
+	
 	/**
 	 * Unsubscribes from an event.
 	 * @param {string} event - The name of the event to unsubscribe from.
@@ -198,9 +198,9 @@ export default class TauriApi {
 			this.eventSubscriptions.delete(event); // Clean up the reference
 		}
 	}
-
+	
 	/** Quality of Life Functions */
-
+	
 	public static async CheckThemeBeforeReload(
 		currentThemeName: string,
 		currentThemeHtml: string,
@@ -212,12 +212,22 @@ export default class TauriApi {
 			currentThemeCss
 		});
 	}
-
+	
 	/** Youtube Process */
-	public static async GetChannel(id: string) {
-		return await this.command<unknown>("get_channel", {id});
+	public static async SetChannel(id: string) {
+		await this.command<unknown>("set_channel", {channelId: id});
+		
+		const channel = await this.command("get_current_channel", {});
+		
+		if (channel) {
+			await this.command("start_monitoring", {})
+		} else {
+			throw new Error("Channel not found");
+		}
+		
+		return channel;
 	}
-
+	
 	public static async GetVideo(url: string) {
 		// Should follow: https://www.youtube.com/watch?v={id}
 		const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -225,14 +235,14 @@ export default class TauriApi {
 		if (match) {
 			return await this.command<Video>("get_video_cmd", {id: match[1]});
 		}
-
+		
 		throw new Error("Invalid URL");
 	}
-
+	
 	public static async GetAllVideos() {
 		return await this.command<Video[]>("get_all_videos", {updateStatus: true});
 	}
-
+	
 	public static async StoreVideo(video: Video): Promise<boolean | VideoError> {
 		try {
 			return await this.command<boolean>("store_new_livestream", {data: video});
@@ -240,15 +250,15 @@ export default class TauriApi {
 			throw e as VideoError;
 		}
 	}
-
+	
 	public static async DeleteVideo(videoId: string) {
 		return await this.command<boolean>("delete_video_from_db", {id: videoId});
 	}
-
+	
 	public static async StartLinkingAIS() {
 		return await this.command<void>("twitch_linking", {});
 	}
-
+	
 	/**
 	 * Invokes a Tauri command.
 	 * @private

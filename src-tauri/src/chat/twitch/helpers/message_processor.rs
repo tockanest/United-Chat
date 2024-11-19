@@ -1,6 +1,6 @@
 use crate::chat::twitch::auth::structs::ImplicitGrantFlow;
 use crate::chat::twitch::helpers::auth_helpers::{construct_emote_url, get_chat_badges, parse_twitch_message, parse_twitch_tags};
-use crate::chat::twitch::irc::UserInformationState;
+use crate::chat::twitch::irc::{IrcUserInformationState};
 use crate::chat::websocket::ws_server::WebSocketServer;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
@@ -31,7 +31,7 @@ pub(crate) async fn message_processor(
     msg: String,
     ws_server: &WebSocketServer,
     auth_state: &ImplicitGrantFlow,
-    user_information: UserInformationState,
+    user_information: IrcUserInformationState,
 ) {
     let msg = msg.to_string();
     let id: String = rand::thread_rng()
@@ -99,7 +99,7 @@ pub(crate) async fn message_processor(
         }
 
         match &user_information {
-            UserInformationState::Regular(user_info) => {
+            IrcUserInformationState::Regular(user_info) => {
                 let badges = get_chat_badges(&auth_state.clone(), user_info).await;
 
                 let mut user_badges: Vec<String> = Vec::new();
@@ -157,7 +157,7 @@ pub(crate) async fn message_processor(
                     .broadcast(Message::Text(serde_json::to_string(&ws_response).unwrap()))
                     .await;
             }
-            UserInformationState::Skipped(_) => {
+            IrcUserInformationState::Skipped(_) => {
                 let response = TwitchResponse {
                     id,
                     timestamp: chrono::Local::now().timestamp_millis(),

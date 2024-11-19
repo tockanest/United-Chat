@@ -10,11 +10,11 @@ export const handleResize = (
 	previewPosition: PreviewPosition,
 ) => {
 	if (!isResizing || !containerRef.current || !editorRef.current || !previewRef.current) return;
-
+	
 	const container = containerRef.current;
 	const containerRect = container.getBoundingClientRect();
 	let newSize: number;
-
+	
 	if (previewPosition === 'left' || previewPosition === 'right') {
 		const currentX = e.clientX - containerRect.left + 50;
 		newSize = previewPosition === 'left'
@@ -26,9 +26,9 @@ export const handleResize = (
 			? ((containerRect.height - currentY) / containerRect.height) * 100
 			: (currentY / containerRect.height) * 100;
 	}
-
+	
 	newSize = Math.max(20, Math.min(newSize, 80));
-
+	
 	if (previewPosition === 'left' || previewPosition === 'right') {
 		editorRef.current.style.width = `${newSize}%`;
 		previewRef.current.style.width = `${100 - newSize}%`;
@@ -58,7 +58,7 @@ export const handleResizeEnd = (
 ) => {
 	if (!isResizing) return;
 	setIsResizing(false);
-
+	
 	if (editorRef.current && containerRef.current) {
 		const editorRect = editorRef.current.getBoundingClientRect();
 		const containerRect = containerRef.current.getBoundingClientRect();
@@ -69,7 +69,7 @@ export const handleResizeEnd = (
 		console.log(String(newEditorSize));
 		setQuickResizeValue(String(newEditorSize));
 	}
-
+	
 	setQuickResizeValue(String(100 - editorSize));
 };
 
@@ -98,6 +98,6 @@ export const useResizeRefs = () => {
 	const editorRef = useRef<HTMLDivElement>(null);
 	const previewRef = useRef<HTMLDivElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
-
+	
 	return {resizeRef, editorRef, previewRef, containerRef};
 };

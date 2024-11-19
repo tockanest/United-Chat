@@ -1,4 +1,4 @@
-use crate::chat::twitch::auth::structs::{ImplicitGrantFlowState, UserInformation, UserSkippedInformation};
+use crate::chat::twitch::auth::structs::{ImplicitGrantFlowState, UserInformation, UserInformationState, UserSkippedInformation};
 use crate::chat::twitch::helpers::message_processor::message_processor;
 use crate::chat::websocket::ws_server::WebSocketServer;
 use futures::{SinkExt, StreamExt};
@@ -29,7 +29,7 @@ struct TwitchResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) enum UserInformationState {
+pub(crate) enum IrcUserInformationState {
     Skipped(Arc<UserSkippedInformation>),
     Regular(Arc<UserInformation>),
 }
@@ -43,11 +43,16 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle, stop_flag: Arc<Atom
         match state.skipped {
             Some(true) => {
                 let skipped_state = Arc::new((*app.state::<UserSkippedInformation>()).clone());
-                UserInformationState::Skipped(skipped_state)
+                IrcUserInformationState::Skipped(skipped_state)
             }
             _ => {
-                let regular_state = Arc::new((*app.state::<UserInformation>()).clone());
-                UserInformationState::Regular(regular_state)
+                let user_state = app.state::<UserInformationState>();
+                let user_information = user_state
+                    .lock()
+                    .map_err(|e| format!("Failed to lock user state: {}", e))
+                    .unwrap()
+                    .clone();
+                IrcUserInformationState::Regular(Arc::new(user_information))
             }
         }
     }; // MutexGuard is dropped here
@@ -76,12 +81,13 @@ pub(crate) async fn connect_twitch_websocket(app: AppHandle, stop_flag: Arc<Atom
                     } else if msg.to_string().contains("Welcome, GLHF!") {
                         ws_stream.send("CAP REQ :twitch.tv/tags".into()).await.unwrap();
                         match &user_information {
-                            UserInformationState::Skipped(user) => {
+                            IrcUserInformationState::Skipped(user) => {
                                 let username = user.username.clone();
                                 ws_stream.send(format!("JOIN #{}", username).into()).await.unwrap();
                             }
-                            UserInformationState::Regular(user_info) => {
-                                ws_stream.send(format!("JOIN #{}", user_info.login).into()).await.unwrap();
+                            IrcUserInformationState::Regular(user_info) => {
+                                let username = user_info.login.clone();
+                                ws_stream.send(format!("JOIN #{}", username).into()).await.unwrap();
                             }
                         }
                     } else if msg.to_string().contains("PRIVMSG") {

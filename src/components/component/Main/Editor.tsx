@@ -46,16 +46,15 @@ export default function Editor(
 		setTriggerReloadAlert
 	}: EditorProps
 ) {
-
+	
 	const [isResizing, setIsResizing] = useState<boolean>(false);
 	const [quickResizeValue, setQuickResizeValue] = useState<string>("15");
 	const [pendingResize, setPendingResize] = useState<boolean>(false);
-
-
+	
 	const [combinedCode, setCombinedCode] = useState<string>("");
 	const [messages, setMessages] = useState<PlatformMessage<"twitch" | "youtube">[]>([]);
-
-	const [config, setConfig] = useState<ConfigState>({
+	
+	const [config, setConfig] = useState<WebChatConfig>({
 		scaling: false,
 		scalingValue: 1,
 		fadeOut: false,
@@ -67,7 +66,7 @@ export default function Editor(
 		currentHeight: 600,
 		messageTransition: "none"
 	});
-
+	
 	useEffect(() => {
 		const configString = localStorage.getItem("chatConfig");
 		const config = configString ? JSON.parse(configString) : null;
@@ -75,38 +74,37 @@ export default function Editor(
 			setConfig(config);
 		}
 	}, [])
-
+	
 	useEffect(() => {
 		localStorage.setItem("chatConfig", JSON.stringify(config));
 	}, [config])
-
-
+	
+	
 	const {resizeRef, editorRef, previewRef, containerRef} = useResizeRefs();
 	const [startWebsocket, setStartWebsocket] = useState<boolean>(false);
-
-
+	
 	useEffect(() => {
 		const handleGlobalMouseMove = (e: MouseEvent) => {
 			if (isResizing) {
 				handleResize(e, isResizing, containerRef, editorRef, previewRef, previewPosition);
 			}
 		};
-
+		
 		const handleGlobalMouseUp = () => {
 			if (isResizing) {
 				handleResizeEnd(isResizing, setIsResizing, editorRef, containerRef, previewPosition, setEditorSize, setQuickResizeValue, editorSize);
 			}
 		};
-
+		
 		document.addEventListener('mousemove', handleGlobalMouseMove);
 		document.addEventListener('mouseup', handleGlobalMouseUp);
-
+		
 		return () => {
 			document.removeEventListener('mousemove', handleGlobalMouseMove);
 			document.removeEventListener('mouseup', handleGlobalMouseUp);
 		};
 	}, [isResizing, handleResize, handleResizeEnd]);
-
+	
 	useEffect(() => {
 		const formattedMessages = messages.map(msg => replacePlaceholders(htmlCode, msg.message, msg.platform)).join('');
 		setCombinedCode(`
@@ -126,7 +124,7 @@ export default function Editor(
       </html>
     `);
 	}, [htmlCode, cssCode, messages]);
-
+	
 	useEffect(() => {
 		const editorTheme = localStorage.getItem("chatTheme") || "default";
 		TauriApi.GetEditorTheme(editorTheme).then((theme) => {
@@ -134,22 +132,22 @@ export default function Editor(
 			setCssCode(theme.css_code);
 		});
 	}, [])
-
+	
 	useEffect(() => {
 		if (!startWebsocket) {
 			const messageInterval = setInterval(() => {
 				const newMessage = randomMessageObject();
 				setMessages((prevMessages) => [...prevMessages, newMessage]);
 			}, 5000);
-
+			
 			const cleanupInterval = setInterval(() => {
 				const now = Date.now();
-
+				
 				// Check if a message is older than 10 seconds
 				setMessages((prevMessages) => prevMessages.filter((msg) => now - Number(msg.message.timestamp) < 10000));
 			}, 1000);
-
-
+			
+			
 			return () => {
 				clearInterval(messageInterval);
 				clearInterval(cleanupInterval);
@@ -160,7 +158,7 @@ export default function Editor(
 				if (getYtStreams.length > 0) {
 					// Get the first stream that has the live status
 					const liveStream = getYtStreams.find(stream => stream.stream_type === "live");
-
+					
 					if (liveStream) {
 						try {
 							return await TauriApi.StartUnitedChat({yt_id: liveStream.video_id, interval: 2000});
@@ -169,7 +167,7 @@ export default function Editor(
 						}
 					}
 				}
-
+				
 				try {
 					await TauriApi.StartUnitedChat();
 					console.log("Everything should be started now");
@@ -177,13 +175,13 @@ export default function Editor(
 					console.error(e);
 				}
 			}
-
+			
 			startEverything();
-
+			
 		}
-
+		
 	}, [startWebsocket]);
-
+	
 	return (
 		<main className="flex-grow flex overflow-hidden">
 			<div ref={containerRef}

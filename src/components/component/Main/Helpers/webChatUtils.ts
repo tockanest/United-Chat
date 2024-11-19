@@ -30,10 +30,10 @@ function formatYoutubeMessage(message: YoutubeResponse) {
 		}
 		return msg;
 	}).join("</img>");
-
+	
 	// Replace all missing spaces
 	const replacedSpaces = formattedMessage.replaceAll("{\" \"}", "");
-
+	
 	return replacedSpaces;
 }
 
@@ -72,12 +72,12 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 				.replaceAll("{badge_3}", message.author_badges[2] || "")
 				.replaceAll("{badges}", returnAllBadges(message.author_badges))
 				.replaceAll("{timestamp}", moment(Number(message.timestamp) / 1000).format("HH:mm"))
-
+			
 		}
 	}
 }
 
-function handleConfigChange(key: keyof ConfigState, value: number | boolean | string, setConfig: React.Dispatch<React.SetStateAction<ConfigState>>) {
+function handleConfigChange(key: keyof WebChatConfig, value: number | boolean | string, setConfig: React.Dispatch<React.SetStateAction<WebChatConfig>>) {
 	setConfig(prevConfig => ({...prevConfig, [key]: value}))
 }
 
@@ -98,7 +98,7 @@ function removeComments(html: string): string {
 function handleWebChatWindow(
 	htmlCode: string,
 	cssCode: string,
-	config: ConfigState,
+	config: WebChatConfig,
 	setDialogMessage: React.Dispatch<React.SetStateAction<string>>,
 	setShowConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>,
 	setStartWebsocket: React.Dispatch<React.SetStateAction<boolean>>,
@@ -109,10 +109,10 @@ function handleWebChatWindow(
 	if (!startWebsocket) {
 		const cleanedCssCode = cssCode.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
 		const base64CssCode = btoa(cleanedCssCode); // Encode to Base64
-
+		
 		const cleanedHtmlCode = removeComments(htmlCode); // Remove comments
 		const base64HtmlCode = btoa(cleanedHtmlCode); // Encode to Base64
-
+		
 		// Get the configuration from the editor
 		const scaling = config.scaling;
 		const scalingValue = config.scalingValue;
@@ -124,12 +124,12 @@ function handleWebChatWindow(
 		const currentHeight = config.currentHeight;
 		const maxMessages = config.maxMessages;
 		const messageTransition = config.messageTransition;
-
+		
 		// If any of the boolean values are false, ignore them
 		let configString = "";
 		if (scaling) configString += `scaling=${scalingValue}&`;
 		if (fadeOut) configString += `fadeOut=${fadeOut}&`;
-
+		
 		// Add the max width and height
 		configString += `maxWidth=${maxWidth}&maxHeight=${maxHeight}&`;
 		// Add the current width and height
@@ -138,23 +138,23 @@ function handleWebChatWindow(
 		configString += `&maxMessages=${maxMessages}&removalTimer=${messageRemoveTimer}`;
 		// Add the message transition
 		configString += `&messageTransition=${messageTransition}`;
-
+		
 		const url = `webchat?htmlTemplate=${encodeURIComponent(base64HtmlCode)}&css=${base64CssCode}&${configString}`;
-
+		
 		const port = process.env.NODE_ENV === "production" ? "9889" : "3000";
 		const fullUrl = `http://127.0.0.1:${port}/${url}`;
 		setDialogMessage(fullUrl);
 		setShowConfirmDialog(true);
-
+		
 	} else {
 		TauriApi.DisconnectTwitchWebsocket();
 	}
-
+	
 	if (webChatWindowShown) {
 		TauriApi.CloseWebChatWindow();
 		setWebChatWindowShown(false);
 	}
-
+	
 	setStartWebsocket(!startWebsocket);
 }
 

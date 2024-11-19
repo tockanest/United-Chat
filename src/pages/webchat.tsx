@@ -19,7 +19,7 @@ export default function WebChat() {
 		messageTransition,
 		isDebug
 	} = router.query;
-
+	
 	const decodedHtmlTemplate = htmlTemplate ? atob(decodeURIComponent(htmlTemplate as string)) : '';
 	const removalTimeSeconds = Number(removalTimer);
 	const fadeOutEnabled = fadeOut === "true";
@@ -31,12 +31,12 @@ export default function WebChat() {
 	const scalingEnabled = scaling === "true";
 	const scalingFactor = Number(scalingValue);
 	const transition = messageTransition as string;
-
+	
 	const [messages, setMessages] = useState<Message[]>([]);
 	const fadeQueueRef = useRef<Set<string>>(new Set());
 	const [messagesToRemove, setMessagesToRemove] = useState<Set<string>>(new Set());
 	const [animationsCss, setAnimationsCss] = useState<string>('');
-
+	
 	const processFadeOutQueue = useCallback(async () => {
 		if (fadeQueueRef.current.size > messagesLimit) {
 			const now = moment();
@@ -48,14 +48,14 @@ export default function WebChat() {
 				}
 			});
 		}
-
+		
 		for (const id of fadeQueueRef.current) {
 			if (!fadeOutEnabled) continue;
 			const messageElement = document.getElementById(id);
-
+			
 			if (messageElement) {
 				messageElement.classList.add('fade-out');
-
+				
 				await new Promise<void>(resolve => {
 					const handleTransitionEnd = () => {
 						messageElement.removeEventListener('transitionend', handleTransitionEnd);
@@ -66,51 +66,51 @@ export default function WebChat() {
 					};
 					messageElement.addEventListener('transitionend', handleTransitionEnd);
 				});
-
+				
 				setMessages(prevMessages => prevMessages.filter(msg => msg.message.id !== id));
 				fadeQueueRef.current.delete(id);
 			}
-
+			
 			await new Promise(resolve => setTimeout(resolve, 2000));
 		}
 	}, [messages, fadeOutEnabled, messagesLimit, removalTimeSeconds]);
-
+	
 	useEffect(() => {
 		if (messagesToRemove.size > 0) {
 			setMessages(prevMessages => prevMessages.filter(msg => !messagesToRemove.has(msg.message.id)));
 			setMessagesToRemove(new Set());
 		}
 	}, [messagesToRemove]);
-
+	
 	useEffect(() => {
 		const cleanupInterval = setInterval(() => {
 			const now = moment();
-
+			
 			setMessages(prevMessages => prevMessages.filter(msg => {
 				if (!msg.message.timestamp) return msg;
-
+				
 				const messageTime = msg.platform === "youtube"
 					? moment(Number(msg.message.timestamp) / 1000)
 					: moment(msg.message.timestamp);
-
+				
 				const shouldFadeOut = fadeOutEnabled && now.diff(messageTime, 'seconds') >= removalTimeSeconds;
-
+				
 				if (shouldFadeOut && !msg.fadingOut) {
 					fadeQueueRef.current.add(msg.message.id);
 					processFadeOutQueue();
 					return {...msg, fadingOut: true};
 				}
-
+				
 				const shouldBeRemoved = !fadeOutEnabled && now.diff(messageTime, 'seconds') >= removalTimeSeconds;
 				return !shouldBeRemoved;
 			}));
 		}, 1000);
-
+		
 		return () => {
 			clearInterval(cleanupInterval);
 		};
 	}, [fadeOutEnabled, removalTimeSeconds, processFadeOutQueue]);
-
+	
 	useEffect(() => {
 		if (messages.length > messagesLimit) {
 			const oldestMessageId = messages[0].message.id;
@@ -118,41 +118,42 @@ export default function WebChat() {
 			fadeQueueRef.current.delete(oldestMessageId);
 		}
 	}, [messages, messagesLimit]);
-
+	
 	useEffect(() => {
 		const ws = new WebSocket('ws://localhost:9888');
-
+		
 		ws.onopen = () => {
 			console.log('WebSocket connection established');
 		};
-
+		
 		ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
+			console.log(data);
 			const newMessage: Message = {
 				platform: data.platform,
 				message: {
 					...data.data
 				}
 			};
-
+			
 			setMessages(prevMessages => [...prevMessages, newMessage as Message]);
 		};
-
+		
 		ws.onclose = () => {
 			console.log('WebSocket connection closing');
 		};
-
+		
 		document.body.style.backgroundColor = 'transparent';
-
+		
 		fetch('/styles/webchat_transitions.css')
 			.then(res => res.text())
 			.then(css => setAnimationsCss(css));
-
+		
 		return () => {
 			ws.close();
 		};
 	}, [decodedHtmlTemplate]);
-
+	
 	return (
 		<div
 			className={`bg-transparent flex flex-col w-[${width}px] h-[${height}px] max-h-[${divMaxHeight}px] max-w-[${divMaxWidth}px] overflow-y-auto `}

@@ -15,8 +15,8 @@ import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/compon
 import {Settings} from 'lucide-react'
 
 interface ConfigDropdownProps {
-	config: ConfigState
-	onConfigChange: (key: keyof ConfigState, value: number | boolean | string) => void
+	config: WebChatConfig
+	onConfigChange: (key: keyof WebChatConfig, value: number | boolean | string) => void
 }
 
 export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownProps) {
@@ -46,7 +46,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					{config.scaling && (
 						<TooltipProvider>
 							<Tooltip>
@@ -72,7 +72,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</Tooltip>
 						</TooltipProvider>
 					)}
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -90,7 +90,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -125,7 +125,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -149,7 +149,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -175,7 +175,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -195,7 +195,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -215,7 +215,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -235,7 +235,7 @@ export default function ConfigDropdown({config, onConfigChange}: ConfigDropdownP
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-
+					
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>

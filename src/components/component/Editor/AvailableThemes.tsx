@@ -15,17 +15,17 @@ async function GetThemes() {
 
 export default function AvailableThemes({format, selectedTheme, setCurrentTheme, newTheme}: AvailableThemesProps) {
 	const [themes, setThemes] = useState<string[]>([]);
-
+	
 	useEffect(() => {
 		GetThemes().then(setThemes);
 	}, []);
-
+	
 	useEffect(() => {
 		if (newTheme) {
 			GetThemes().then(setThemes);
 		}
 	}, [newTheme]);
-
+	
 	if (format === "dropdown") {
 		return (
 			<DropdownMenuContent className={"w-fit p-1"}>

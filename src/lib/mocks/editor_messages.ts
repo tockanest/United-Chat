@@ -96,7 +96,7 @@ function userBadges() {
 		"https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/3",
 		"https://static-cdn.jtvnw.net/badges/v1/ed917c9a-1a45-4340-9c64-ca8be4348c51/3"
 	];
-
+	
 	// Select maximum of 3 badges
 	const maxBadges = 3;
 	return badges.slice(0, Math.min(maxBadges, badges.length));
@@ -120,9 +120,9 @@ function randomColorHex() {
 
 export default function randomMessageObject(): PlatformMessage<"twitch" | "youtube"> {
 	const badges = userBadges();
-
+	
 	const platform = randomPlatform();
-
+	
 	switch (platform) {
 		case "twitch": {
 			return {

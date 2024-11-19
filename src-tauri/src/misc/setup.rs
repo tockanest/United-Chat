@@ -1,4 +1,5 @@
 use crate::chat::twitch::auth::structs::{ImplicitGrantFlow, UserInformation, UserInformationState, UserSkippedInformation};
+use crate::chat::youtube::channel::manager::init_channel_manager;
 use crate::chat::youtube::state_manager::get_all_videos;
 use crate::misc::editor::get_theme::initialize_default_themes;
 use crate::misc::qol::database::config::DatabaseConfig;
@@ -23,13 +24,13 @@ fn get_password(service: &str, username: &str) -> Result<String, keyring::Error>
 }
 
 async fn backend_setup(app: AppHandle) {
+
     let db_manager = DatabaseManager::new();
     let config = DatabaseConfig::default();
     db_manager.initialize(Some(config)).await.unwrap();
     app.manage(DatabaseState::new(db_manager));
 
     let app_clone = app.clone();
-
 
     match get_password("united-chat", "twitch-auth") {
         Ok(auth) => {
@@ -128,8 +129,8 @@ async fn backend_setup(app: AppHandle) {
     };
 
     initialize_default_themes(&app_clone).unwrap();
-
-    get_all_videos(app_clone.clone(), Option::from(true), None).await.unwrap();
+    init_channel_manager(&app_clone).await;
+    get_all_videos(app_clone, Option::from(true), None).await.unwrap();
 }
 
 #[tauri::command]

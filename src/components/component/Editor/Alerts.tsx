@@ -46,7 +46,7 @@ export default function Alerts(
 ) {
 	const [copied, setCopied] = useState(false)
 	const [themeName, setThemeName] = useState<string>("")
-
+	
 	return (
 		<>
 			<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
@@ -95,7 +95,7 @@ export default function Alerts(
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-
+			
 			<AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
 				<AlertDialogContent className="sm:max-w-[425px]">
 					<AlertDialogHeader>
@@ -127,7 +127,7 @@ export default function Alerts(
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-
+			
 			<AlertDialog open={triggerReloadAlert} onOpenChange={setTriggerReloadAlert}>
 				<AlertDialogContent className="sm:max-w-[425px]">
 					<AlertDialogHeader>

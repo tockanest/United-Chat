@@ -72,7 +72,13 @@ pub(crate) async fn get_all_videos(
     update_status: Option<bool>,
     max_retries: Option<usize>,
 ) -> Result<Vec<VideoInfo>, String> {
-    let db = app.state::<DatabaseState>();
+    let db = match app.try_state::<DatabaseState>() {
+        None => {
+            return Err("Database not initialized".to_string());
+        }
+        Some(db) => db,
+    };
+
     let db = db.0.get_db().await.unwrap().deref().clone();
 
     max_retries.unwrap_or(3);

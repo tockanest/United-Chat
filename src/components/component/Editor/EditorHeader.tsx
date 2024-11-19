@@ -12,14 +12,15 @@ import {css} from "@codemirror/lang-css"
 import TauriApi from "@/lib/Tauri"
 import {handleConfigChange, handleWebChatWindow} from "@/components/component/Main/Helpers/webChatUtils"
 import Alerts from "@/components/component/Editor/Alerts";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 
 export type EditorHeaderProps = {
 	htmlCode: string;
 	setHtmlCode: React.Dispatch<React.SetStateAction<string>>;
 	cssCode: string;
 	setCssCode: React.Dispatch<React.SetStateAction<string>>;
-	config: ConfigState;
-	setConfig: React.Dispatch<React.SetStateAction<ConfigState>>;
+	config: WebChatConfig;
+	setConfig: React.Dispatch<React.SetStateAction<WebChatConfig>>;
 	showSaveDialog: boolean;
 	setShowSaveDialog: React.Dispatch<React.SetStateAction<boolean>>;
 	startWebsocket: boolean;
@@ -45,19 +46,20 @@ export default function EditorHeader(
 	}: EditorHeaderProps
 ) {
 	const [editorSelected, setEditorSelected] = useState<string>('html')
-
+	
 	const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false)
 	const [dialogMessage, setDialogMessage] = useState<string>("")
 	const [webChatWindowShown, setWebChatWindowShown] = useState<boolean>(false)
-
+	
 	const [theme, setTheme] = useState<string>("default")
 	const [newTheme, setNewTheme] = useState<boolean>(false)
-
+	const [buttonDisabled, setButtonDisabled] = useState<boolean>(false)
+	
 	useEffect(() => {
 		const theme = localStorage.getItem("chatTheme")
 		setTheme(theme || "default")
 	}, [])
-
+	
 	useEffect(() => {
 		console.log(theme)
 		TauriApi.GetEditorTheme(theme).then((result) => {
@@ -68,7 +70,15 @@ export default function EditorHeader(
 			}
 		})
 	}, [theme])
-
+	
+	const handleButtonClick = () => {
+		setButtonDisabled(true);
+		handleWebChatWindow(htmlCode, cssCode, config, setDialogMessage, setShowConfirmDialog, setStartWebsocket, webChatWindowShown, setWebChatWindowShown, startWebsocket);
+		setTimeout(() => {
+			setButtonDisabled(false);
+		}, 3000);
+	}
+	
 	return (
 		<>
 			<Alerts
@@ -134,26 +144,37 @@ export default function EditorHeader(
 							<Save className="h-4 w-4 mr-1"/>
 							Save
 						</Button>
-						<Button
-							onClick={() => {
-								handleWebChatWindow(htmlCode, cssCode, config, setDialogMessage, setShowConfirmDialog, setStartWebsocket, webChatWindowShown, setWebChatWindowShown, startWebsocket)
-							}}
-							size="sm"
-							variant={startWebsocket ? "destructive" : "default"}
-							className={`transition-all duration-200 ease-in-out ${startWebsocket ? "bg-red-600 hover:bg-red-700" : "bg-green-500 hover:bg-green-600"}`}
-						>
-							{startWebsocket ? (
-								<>
-									<Pause className="h-4 w-4 mr-1"/>
-									Stop
-								</>
-							) : (
-								<>
-									<Play className="h-4 w-4 mr-1"/>
-									Start
-								</>
-							)}
-						</Button>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger>
+									<Button
+										onClick={handleButtonClick}
+										size="sm"
+										variant={startWebsocket ? "destructive" : "default"}
+										className={`transition-all duration-200 ease-in-out ${startWebsocket ? "bg-red-600 hover:bg-red-700" : "bg-green-500 hover:bg-green-600"}`}
+										disabled={buttonDisabled}
+									>
+										{startWebsocket ? (
+											<>
+												<Pause className="h-4 w-4 mr-1"/>
+												Stop
+											</>
+										) : (
+											<>
+												<Play className="h-4 w-4 mr-1"/>
+												Start
+											</>
+										)}
+									</Button>
+								</TooltipTrigger>
+								{/*TODO: Instead of using a timer, we should use an event based trigger to either disable or enable the button state.*/}
+								<TooltipContent className={"w-[400px]"}>
+									If you see this as disabled, please wait for a few seconds.<br/>This happens because the server is
+									still
+									either starting or stopping.
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
 						<ConfigDropdown
 							config={config}
 							onConfigChange={(key, value) => handleConfigChange(key, value, setConfig)}

@@ -1,11 +1,6 @@
-use std::path::PathBuf;
+use crate::misc::editor::get_theme::ThemeState;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
-
-pub(crate) struct ThemeState {
-    /// (Name, HTML path, CSS path)
-    pub(crate) themes: Vec<(String, PathBuf, PathBuf)>,
-}
 
 #[tauri::command]
 pub(crate) async fn save_theme(html_code: String, css_code: String, theme_name: String, app: AppHandle) -> tauri::Result<bool> {

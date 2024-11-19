@@ -1,8 +1,6 @@
-'use client'
-
 import React from "react"
 import Link from "next/link"
-import {EyeIcon, EyeOffIcon, LogOut, Settings, User, LogIn} from "lucide-react"
+import {EyeIcon, EyeOffIcon, LogIn, LogOut, Settings, User} from "lucide-react"
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 import {Button} from "@/components/ui/button"
 import {
@@ -29,14 +27,16 @@ type HeaderProps = {
 	setEditorSize: React.Dispatch<React.SetStateAction<number>>
 }
 
-export default function Header({
-	                               setPage,
-	                               setEditorSize,
-	                               setShowPreview,
-	                               showPreview,
-	                               togglePreview,
-	                               user,
-                               }: HeaderProps) {
+export default function Header(
+	{
+		setPage,
+		setEditorSize,
+		setShowPreview,
+		showPreview,
+		togglePreview,
+		user,
+	}: HeaderProps
+) {
 	const logout = () => {
 		localStorage.setItem("twitch_linked", "false")
 		// Assuming TauriApi.Logout() is available in the global scope

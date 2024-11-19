@@ -1,4 +1,4 @@
-use crate::misc::editor::save_theme::ThemeState;
+use crate::misc::editor::get_theme::ThemeState;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 

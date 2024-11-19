@@ -7,29 +7,28 @@ import Editor from "@/components/component/Main/Editor";
 import UnitedChatSettings from "@/components/component/Main/Settings";
 
 export default function UnitedChat() {
-
+	
 	const [htmlCode, setHtmlCode] = useState<string>("");
 	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
 	const [currentPage, setCurrentPage] = useState<string>("editor")
-
+	
 	useEffect(() => {
 		Tauri.GetUserInformation().then((user) => {
-			console.log(user)
 			if (user) {
 				setUser(user)
 			}
 		})
 	}, [])
-
-
+	
+	
 	const [previewPosition, setPreviewPosition] = useState<PreviewPosition>('right')
 	const [editorSize, setEditorSize] = useState<number>(85) // percentage
 	const [showPreview, setShowPreview] = useState<boolean>(true)
-
+	
 	const [user, setUser] = useState<UserInformation | null>(null)
 	const [showSaveDialog, setShowSaveDialog] = useState<boolean>(false)
 	const [triggerReloadAlert, setTriggerReloadAlert] = useState(false);
-
+	
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			switch (e.key) {
@@ -59,7 +58,7 @@ export default function UnitedChat() {
 							if (result) {
 								return setTriggerReloadAlert(true);
 							}
-
+							
 							window.location.reload()
 						})
 					}
@@ -68,15 +67,14 @@ export default function UnitedChat() {
 					break;
 			}
 		};
-
+		
 		document.addEventListener("keydown", handleKeyDown);
-
+		
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
 	}, [showPreview, htmlCode, cssCode]);
-
-
+	
 	return (
 		<div className="flex flex-col h-screen">
 			<Header
