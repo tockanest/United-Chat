@@ -45,6 +45,7 @@ export default function WebChat() {
 				if (message && now.diff(moment(message.message.timestamp), 'seconds') >= removalTimeSeconds) {
 					setMessages(prevMessages => prevMessages.filter(msg => msg.message.id !== id));
 					fadeQueueRef.current.delete(id);
+					console.debug(`Removed message with id: ${id}`);
 				}
 			});
 		}
@@ -97,7 +98,7 @@ export default function WebChat() {
 				
 				if (shouldFadeOut && !msg.fadingOut) {
 					fadeQueueRef.current.add(msg.message.id);
-					processFadeOutQueue();
+					processFadeOutQueue()
 					return {...msg, fadingOut: true};
 				}
 				

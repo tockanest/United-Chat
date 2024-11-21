@@ -1,6 +1,7 @@
 import TauriApi from "@/lib/Tauri";
-import React from "react";
+import React, {Dispatch} from "react";
 import moment from "moment";
+import {Message, PlatformMessage, TwitchResponse, WebChatConfig, YoutubeResponse} from "@/types/chat";
 
 function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
 	switch (platform) {
@@ -10,6 +11,9 @@ function formatPlatformBadge(platform: PlatformMessage<"twitch" | "youtube">["pl
 		case "youtube": {
 			return "<img src='/icons/brands/youtube-color.svg' alt='youtube' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>";
 		}
+		default: {
+			return "";
+		}
 	}
 }
 
@@ -17,24 +21,6 @@ function returnAllBadges(badges: string[]) {
 	return badges.map((badge, index) => {
 		return `<img src='${badge}' alt='badge' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>`
 	}).join(" ");
-}
-
-function formatYoutubeMessage(message: YoutubeResponse) {
-	// Check if there's images in the message (usually emotes) and replace them with the correct styling (flex flex-row items-start)
-	// Images will be already on  the format: <img id=\"{}\" src=\"{}\" alt=\"{}\" />", emoji_name, emoji_url, emoji_name
-	// So we'll split all emojis by the closing tag, set the correct styling and join them back together
-	const splitMessage = message.message.split("</img>");
-	const formattedMessage = splitMessage.map((msg) => {
-		if (msg.includes("<img")) {
-			return `<div class=''>${msg}</div>`;
-		}
-		return msg;
-	}).join("</img>");
-	
-	// Replace all missing spaces
-	const replacedSpaces = formattedMessage.replaceAll("{\" \"}", "");
-	
-	return replacedSpaces;
 }
 
 function replacePlaceholders(template: string, message: Message["message"], platform: PlatformMessage<"twitch" | "youtube">["platform"]) {
@@ -77,7 +63,7 @@ function replacePlaceholders(template: string, message: Message["message"], plat
 	}
 }
 
-function handleConfigChange(key: keyof WebChatConfig, value: number | boolean | string, setConfig: React.Dispatch<React.SetStateAction<WebChatConfig>>) {
+function handleConfigChange(key: keyof WebChatConfig, value: number | boolean | string, setConfig: Dispatch<React.SetStateAction<WebChatConfig>>) {
 	setConfig(prevConfig => ({...prevConfig, [key]: value}))
 }
 

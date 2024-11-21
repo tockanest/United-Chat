@@ -13,6 +13,7 @@ import TauriApi from "@/lib/Tauri"
 import {handleConfigChange, handleWebChatWindow} from "@/components/component/Main/Helpers/webChatUtils"
 import Alerts from "@/components/component/Editor/Alerts";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {WebChatConfig} from "@/types/chat";
 
 export type EditorHeaderProps = {
 	htmlCode: string;
@@ -146,7 +147,7 @@ export default function EditorHeader(
 						</Button>
 						<TooltipProvider>
 							<Tooltip>
-								<TooltipTrigger>
+								<TooltipTrigger asChild>
 									<Button
 										onClick={handleButtonClick}
 										size="sm"
@@ -177,7 +178,7 @@ export default function EditorHeader(
 						</TooltipProvider>
 						<ConfigDropdown
 							config={config}
-							onConfigChange={(key, value) => handleConfigChange(key, value, setConfig)}
+							onConfigChange={(key: keyof WebChatConfig, value) => handleConfigChange(key, value, setConfig)}
 						/>
 					</div>
 				</div>
