@@ -123,6 +123,11 @@ npm run tauri:dev
 - [ ] Additional platform support (based on demand)
 - [ ] Improved error handling
 - [ ] Community-driven features
+- [ ] Future Features:
+- - [ ] Subathon Timer.
+- - [ ] Bot Messages (Automoderation and similar)
+- - [ ] Social Card (Might not do.)
+
 
 ## Community & Support 🤝
 
@@ -147,6 +152,14 @@ I have used Claude and v0 from Vercel. Claude for backend stuff like helping me 
 v0 was used, obviously, for the design of the app. However, every state management and custom functions were made by me and only me. I may have used Claude for some things to debug since NextJs can be weird sometimes.
 
 If you have any bugs or questions about this, since this doesn't have anyone using it, I'll gladly answer your questions either through the Discord server or my DMs through any social media linked through my GitHub. If you prefer Discord, could you join my server? (Pretty please?)
+
+About the future features, there's a lot that I want to do, I want this app to be as useful as it can be, even if no one uses it.
+
+I really like the idea of subathons, so I might add it along with the already existing IRC WSS.
+
+Bot messages might be something hard to do, this might be server-side and depending on how I make it, maybe a future paid feature? Though I dislike that idea, I'll try my best to make it free and local.
+
+Social Card would be something to keep track of your account. Let's say you linked your Twitch account to the app and, by some reason, everything goes wrong on your PC and you have to reconfigure it. By linking your account again, I might add a server-side backup feature along with the Social Card to keep track of your themes and preferences.
 
 ## License 📜
 
