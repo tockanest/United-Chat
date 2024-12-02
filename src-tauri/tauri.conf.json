@@ -18,7 +18,7 @@
 				"height": 600,
 				"resizable": true,
 				"visible": true,
-				"url": "/splashscreen",
+				"url": "/",
 				"center": true,
 				"closable": false
 			}
@@ -32,8 +32,8 @@
 		"resources": ["./assets/**/*"],
 		"targets": "all",
 		"icon": [
-			"icons/256x256.png",
-			"icons/256x256.ico"
+			"icons/icon.ico",
+			"icons/icon.png"
 		]
 	},
 	"plugins": {
