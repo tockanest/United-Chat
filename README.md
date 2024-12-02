@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="/public/icons/256x256.ico" alt="Logo" width="256" height="256"/>
+<img src="/public/icons/logo.svg" alt="Logo" width="256" height="256"/>
 
 [![WakaTime](https://wakatime.com/badge/user/e0979afa-f854-452d-b8a8-56f9d69eaa3b/project/38e7c0a8-1828-4150-9756-52e20de24759.svg)](https://wakatime.com/badge/user/e0979afa-f854-452d-b8a8-56f9d69eaa3b/project/38e7c0a8-1828-4150-9756-52e20de24759)
 [![Build Status](https://github.com/tockawaffle/United-Chat/actions/workflows/united-chat.yml/badge.svg)](https://github.com/tockawaffle/United-Chat/actions/workflows/united-chat.yml)
