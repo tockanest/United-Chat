@@ -14,6 +14,9 @@
 		"core:menu:default",
 		"core:tray:default",
 		"core:default",
-		"shell:default"
+		"shell:default",
+		"deep-link:default",
+		"deep-link:allow-is-registered",
+		"deep-link:allow-get-current"
 	]
 }

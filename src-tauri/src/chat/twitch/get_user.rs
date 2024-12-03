@@ -3,7 +3,12 @@ use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 pub(crate) fn get_user(app: AppHandle) -> Result<UserInformation, String> {
-    let state = app.state::<ImplicitGrantFlowState>();
+    let state = match app.try_state::<ImplicitGrantFlowState>() {
+        None => {
+            panic!("Auth Not Found")
+        }
+        Some(state) => state
+    };
     let state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
 
     println!("{:?}", state);

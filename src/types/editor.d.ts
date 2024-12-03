@@ -17,6 +17,19 @@ declare global {
 			css_code: string;
 		}
 		
+		interface ConfigState {
+			scaling: boolean
+			scalingValue: number
+			fadeOut: boolean
+			messageRemoveTimer: number
+			maxMessages: number
+			maxWidth: number
+			maxHeight: number
+			currentWidth: number
+			currentHeight: number
+			messageTransition: string
+		}
+		
 	}
 }
 
