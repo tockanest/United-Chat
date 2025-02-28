@@ -40,6 +40,18 @@ export function validateTwitchUrl(url: string): boolean {
 	}
 }
 
+/**
+ * Retrieves the Twitch channel name from a URL.
+ * 
+ * @param url - The URL to retrieve the channel name from.
+ * @returns The Twitch channel name or null if the URL is not a valid Twitch URL.
+ */
+export function retrieveTwitchChannelName(url: string): string | null {
+	const urlObj = new URL(url.toLowerCase());
+	const channelName = urlObj.pathname.slice(1);
+	return channelName;
+}
+
 // Example usage:
 /*
 validateTwitchUrl('https://www.twitch.tv/example') // true

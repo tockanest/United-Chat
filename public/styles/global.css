@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@config '../../tailwind.config.ts';
 
 @layer base {
     :root {
@@ -94,5 +96,14 @@
 
     ::-webkit-scrollbar-corner {
         background-color: hsl(var(--background) / 0.5);
+    }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
     }
 }

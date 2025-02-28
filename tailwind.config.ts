@@ -1,4 +1,4 @@
-import {fontFamily} from 'tailwindcss/defaultTheme'
+import fontFamily from 'tailwindcss/defaultTheme'
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -59,7 +59,7 @@ module.exports = {
                 sm: "calc(var(--radius) - 4px)",
             },
             fontFamily: {
-                sans: ['Inter var', ...fontFamily.sans],
+                sans: ['Inter var', ...fontFamily.fontFamily.sans],
             },
             keyframes: {
                 "accordion-down": {

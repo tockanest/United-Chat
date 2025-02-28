@@ -33,6 +33,11 @@
     animation: slideFromBottom 0.5s ease-out;
 }
 
+/* 
+TODO: Fix the typewriter transition, it's not working as expected on the preview.
+But none of the transitions are working on the preview, so oh well.
+*/
+
 @keyframes typewriter {
     from {
         width: 0;

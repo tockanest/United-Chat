@@ -3,6 +3,7 @@ declare global {
 	namespace Editor {
 		type AvailableThemes = [string, string, string][];
 		type PreviewPosition = 'right' | 'bottom' | 'left' | 'top';
+		type AvailableMessageTransitions = "slide-from-right" | "slide-from-bottom" | "typewriter" | "none";
 		
 		interface Theme {
 			id: string;
@@ -27,7 +28,7 @@ declare global {
 			maxHeight: number
 			currentWidth: number
 			currentHeight: number
-			messageTransition: string
+			messageTransition: AvailableMessageTransitions
 		}
 		
 	}

@@ -2,19 +2,13 @@
 'use client';
 
 import {useEffect, useState} from 'react';
-import {ModernEditor} from '@/components/editor/modern-editor';
 import {TauriAPI} from '@/lib/tauri';
+import Editor from '@/components/editor/editor';
 
 interface EditorProps {
-	showPreview: boolean;
-	setShowPreview: (showPreview: boolean) => void;
 }
 
 export default function EditorPage(
-	{
-		showPreview,
-		setShowPreview,
-	}: EditorProps
 ) {
 	const [htmlCode, setHtmlCode] = useState<string>('');
 	const [cssCode, setCssCode] = useState<string>('/* Add your custom CSS here */');
@@ -72,7 +66,7 @@ export default function EditorPage(
 	};
 	
 	return (
-		<ModernEditor
+		<Editor
 			htmlCode={htmlCode}
 			cssCode={cssCode}
 			setHtmlCode={setHtmlCode}
@@ -85,8 +79,6 @@ export default function EditorPage(
 			onStart={handleStart}
 			isStarted={isStarted}
 			availableThemes={availableThemes}
-			showPreview={showPreview}
-			setShowPreview={setShowPreview}
 		/>
 	);
 }
