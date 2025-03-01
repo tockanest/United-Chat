@@ -16,11 +16,11 @@
 				"title": "United Chat - Inicializando",
 				"width": 600,
 				"height": 600,
-				"resizable": true,
+				"resizable": false,
 				"visible": true,
-				"url": "/",
+				"url": "/auth",
 				"center": true,
-				"closable": false
+				"closable": true
 			}
 		],
 		"security": {
@@ -29,7 +29,9 @@
 	},
 	"bundle": {
 		"active": true,
-		"resources": ["./assets/**/*"],
+		"resources": [
+			"./assets/**/*"
+		],
 		"targets": "all",
 		"icon": [
 			"icons/icon.ico",

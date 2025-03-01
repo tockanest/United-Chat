@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2Icon, TwitchIcon } from 'lucide-react';
+import { Loader2Icon } from 'lucide-react';
+import { SiTwitch } from "@icons-pack/react-simple-icons"
 
 export default function LoginPage() {
 	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -83,7 +84,7 @@ export default function LoginPage() {
 							</>
 						) : (
 							<>
-								<TwitchIcon className="mr-2 h-5 w-5" />
+								<SiTwitch className="mr-2 h-5 w-5" />
 								Connect with Twitch
 							</>
 						)}

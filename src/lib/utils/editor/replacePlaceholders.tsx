@@ -12,11 +12,12 @@ function formatPlatformBadge(platform: Chat.PlatformMessage<"twitch" | "youtube"
 }
 
 function returnAllBadges(badges: string[]) {
-	return badges.map((badge, index) => {
+	return badges.map((badge) => {
 		return `<img src='${badge}' alt='badge' class='w-6 h-6 max-w-[24px] max-h-[24px]'/>`
 	}).join(" ");
 }
 
+//@eslint-disable-next-line @typescript-eslint/no-unused-vars
 function formatYoutubeMessage(message: Chat.YoutubeResponse) {
 	// Check if there's images in the message (usually emotes) and replace them with the correct styling (flex flex-row items-start)
 	// Images will be already on  the format: <img id=\"{}\" src=\"{}\" alt=\"{}\" />", emoji_name, emoji_url, emoji_name
@@ -28,10 +29,10 @@ function formatYoutubeMessage(message: Chat.YoutubeResponse) {
 		}
 		return msg;
 	}).join("</img>");
-	
+
 	// Replace all missing spaces
 	const replacedSpaces = formattedMessage.replaceAll("{\" \"}", "");
-	
+
 	return replacedSpaces;
 }
 
@@ -70,7 +71,7 @@ function replacePlaceholders(template: string, message: Chat.Message["message"],
 				.replaceAll("{badge_3}", message.author_badges[2] || "")
 				.replaceAll("{badges}", returnAllBadges(message.author_badges))
 				.replaceAll("{timestamp}", moment(Number(message.timestamp) / 1000).format("HH:mm"))
-			
+
 		}
 	}
 }
@@ -78,5 +79,5 @@ function replacePlaceholders(template: string, message: Chat.Message["message"],
 
 export {
 	formatPlatformBadge,
-	replacePlaceholders,
+	replacePlaceholders
 };

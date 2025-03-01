@@ -1,3 +1,18 @@
+#![allow(dead_code)]
+/**
+ * YouTube Channel Manager Module
+ *
+ * This module provides functionality for monitoring YouTube channels,
+ * fetching channel information, and tracking livestreams.
+ *
+ * Features:
+ * - Channel information retrieval from YouTube API and web scraping
+ * - Monitoring channels for new livestreams
+ * - Managing channel state and metadata
+ *
+ * Note: This module is under active development and many functions
+ * may be incomplete or not fully tested.
+ */
 use crate::misc::qol::database::state::DatabaseState;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
@@ -108,17 +123,18 @@ impl ChannelState {
             channel_id
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; rv:78.0)")
             .send()
             .await
             .map_err(|e| ChannelError {
-                error: format!("Failed to fetch feed: {}", e)
+                error: format!("Failed to fetch feed: {}", e),
             })?;
 
         let text = response.text().await.map_err(|e| ChannelError {
-            error: format!("Failed to get feed text: {}", e)
+            error: format!("Failed to get feed text: {}", e),
         })?;
 
         // Clean XML declaration
@@ -129,17 +145,17 @@ impl ChannelState {
             ..Default::default()
         };
 
-        let doc = roxmltree::Document::parse_with_options(&text, parse_opts).map_err(|e| ChannelError {
-            error: format!("Failed to parse feed: {}", e)
+        let doc = roxmltree::Document::parse_with_options(&text, parse_opts).map_err(|e| {
+            ChannelError {
+                error: format!("Failed to parse feed: {}", e),
+            }
         })?;
 
         let mut videos = Vec::new();
 
         // Get all entry nodes
         let feed = doc.root_element();
-        let entries = feed
-            .children()
-            .filter(|n| n.has_tag_name("entry"));
+        let entries = feed.children().filter(|n| n.has_tag_name("entry"));
 
         for entry in entries {
             // Get video ID
@@ -148,7 +164,7 @@ impl ChannelState {
                 .find(|n| n.has_tag_name("videoId"))
                 .and_then(|n| n.text())
                 .ok_or_else(|| ChannelError {
-                    error: "Missing video ID".to_string()
+                    error: "Missing video ID".to_string(),
                 })?;
 
             // Get title
@@ -157,7 +173,7 @@ impl ChannelState {
                 .find(|n| n.has_tag_name("title"))
                 .and_then(|n| n.text())
                 .ok_or_else(|| ChannelError {
-                    error: "Missing title".to_string()
+                    error: "Missing title".to_string(),
                 })?;
 
             // Get published date
@@ -166,7 +182,7 @@ impl ChannelState {
                 .find(|n| n.has_tag_name("published"))
                 .and_then(|n| n.text())
                 .ok_or_else(|| ChannelError {
-                    error: "Missing published date".to_string()
+                    error: "Missing published date".to_string(),
                 })?;
 
             // Check if video is live or scheduled
@@ -193,7 +209,13 @@ impl ChannelState {
         let mut assigned_id = channel_id.to_string();
         if assigned_id.contains("@") {
             let url = format!("https://www.youtube.com/{}", channel_id);
-            let response = self.client.get(&url).send().await.map_err(|e| e.to_string()).unwrap();
+            let response = self
+                .client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|e| e.to_string())
+                .unwrap();
 
             // Scrape from the HTML the identifier
             let text_doc = response.text().await.map_err(|e| e.to_string()).unwrap();
@@ -201,11 +223,11 @@ impl ChannelState {
             // Check if it's empty
             if text_doc.is_empty() {
                 return Err(ChannelError {
-                    error: "Empty response".to_string()
+                    error: "Empty response".to_string(),
                 });
             } else if text_doc.contains("This channel does not exist.") {
                 return Err(ChannelError {
-                    error: "Channel does not exist".to_string()
+                    error: "Channel does not exist".to_string(),
                 });
             }
 
@@ -216,7 +238,7 @@ impl ChannelState {
                 .and_then(|s| s.split('"').next())
                 .map(|s| s.to_string())
                 .ok_or_else(|| ChannelError {
-                    error: "Cannot find channel ID".to_string()
+                    error: "Cannot find channel ID".to_string(),
                 })?;
         }
 
@@ -225,17 +247,18 @@ impl ChannelState {
             assigned_id
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; rv:78.0)")
             .send()
             .await
             .map_err(|e| ChannelError {
-                error: format!("Failed to fetch XML: {}", e)
+                error: format!("Failed to fetch XML: {}", e),
             })?;
 
         let text = response.text().await.map_err(|e| ChannelError {
-            error: format!("Failed to get XML text: {}", e)
+            error: format!("Failed to get XML text: {}", e),
         })?;
 
         // Clean XML declaration
@@ -246,8 +269,10 @@ impl ChannelState {
             ..Default::default()
         };
 
-        let doc = roxmltree::Document::parse_with_options(&text, parse_opts).map_err(|e| ChannelError {
-            error: format!("Failed to parse XML: {}", e)
+        let doc = roxmltree::Document::parse_with_options(&text, parse_opts).map_err(|e| {
+            ChannelError {
+                error: format!("Failed to parse XML: {}", e),
+            }
         })?;
 
         let feed = doc.root_element();
@@ -258,7 +283,7 @@ impl ChannelState {
             .find(|n| n.has_tag_name("title"))
             .and_then(|n| n.text())
             .ok_or_else(|| ChannelError {
-                error: "No channel title found".to_string()
+                error: "No channel title found".to_string(),
             })?;
 
         let published_at = feed
@@ -268,13 +293,11 @@ impl ChannelState {
             .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
             .map(|dt| dt.with_timezone(&Utc));
 
-        Ok(
-            FetchXmlResponse {
-                channel_id: assigned_id,
-                title: title.to_string(),
-                published_at,
-            }
-        )
+        Ok(FetchXmlResponse {
+            channel_id: assigned_id,
+            title: title.to_string(),
+            published_at,
+        })
     }
 
     async fn fetch_page_info(&self, channel_id: &str) -> Result<Channel, ChannelError> {
@@ -291,11 +314,11 @@ impl ChannelState {
             .send()
             .await
             .map_err(|e| ChannelError {
-                error: format!("Failed to fetch page: {}", e)
+                error: format!("Failed to fetch page: {}", e),
             })?;
 
         let text = response.text().await.map_err(|e| ChannelError {
-            error: format!("Failed to get page text: {}", e)
+            error: format!("Failed to get page text: {}", e),
         })?;
 
         // Extract metadata section
@@ -304,15 +327,16 @@ impl ChannelState {
             .nth(1)
             .and_then(|s| s.split("</script>").next())
             .ok_or_else(|| ChannelError {
-                error: "Cannot find metadata".to_string()
+                error: "Cannot find metadata".to_string(),
             })?;
 
         // Remove ; from the end of the metadata
         let metadata = metadata.trim_end_matches(';');
 
-        let metadata: YTMetadata = serde_json::from_str(&metadata.to_string()).map_err(|e| ChannelError {
-            error: format!("Failed to parse metadata: {}", e)
-        })?;
+        let metadata: YTMetadata =
+            serde_json::from_str(&metadata.to_string()).map_err(|e| ChannelError {
+                error: format!("Failed to parse metadata: {}", e),
+            })?;
 
         let channel_metadata = metadata.metadata.channel_metadata_renderer;
 
@@ -321,7 +345,11 @@ impl ChannelState {
             title: channel_metadata.title,
             description: Some(channel_metadata.description),
             published_at: None,
-            thumbnail_url: channel_metadata.avatar.thumbnails.first().map(|t| t.url.clone()),
+            thumbnail_url: channel_metadata
+                .avatar
+                .thumbnails
+                .first()
+                .map(|t| t.url.clone()),
             subscriber_count: None,
             video_count: None,
             custom_url: channel_metadata.vanity_channel_url,
@@ -365,7 +393,7 @@ pub async fn init_channel_manager(app: &AppHandle) {
             println!("No database manager found");
         }
         Some(db) => {
-            let db = db.inner().clone().0.get_db().await.unwrap().deref().clone();
+            let db = db.inner().0.get_db().await.unwrap().deref().clone();
             let manager = ChannelManager::new(Arc::new(db));
             app.manage(manager);
             println!("Channel manager initialized");
@@ -374,15 +402,15 @@ pub async fn init_channel_manager(app: &AppHandle) {
 }
 
 #[tauri::command]
-pub async fn set_channel(channel_id: String, state: State<'_, ChannelManager>) -> Result<(), ChannelError> {
+pub async fn set_channel(
+    channel_id: String,
+    state: State<'_, ChannelManager>,
+) -> Result<(), ChannelError> {
     let mut channel_state = state.0.lock().await;
 
     let xml_info = channel_state.fetch_xml_info(&channel_id).await?;
     let page_info = channel_state.fetch_page_info(&channel_id).await?;
-    let channel = ChannelState::merge_channel_info(
-        xml_info,
-        page_info,
-    );
+    let channel = ChannelState::merge_channel_info(xml_info, page_info);
 
     channel_state.channel = Some(channel);
     Ok(())
@@ -400,7 +428,7 @@ pub async fn start_monitoring(
     }
 
     let channel = channel_state.channel.clone().ok_or(ChannelError {
-        error: "No channel set".to_string()
+        error: "No channel set".to_string(),
     })?;
 
     app.manage(Mutex::new(channel.clone()));
@@ -413,7 +441,7 @@ pub async fn start_monitoring(
         loop {
             interval.tick().await;
 
-            let mut state = state_clone.lock().await;
+            let state = state_clone.lock().await;
             if !state.is_monitoring {
                 break;
             }
@@ -421,11 +449,14 @@ pub async fn start_monitoring(
             if let Some(channel) = &state.channel {
                 if let Ok(videos) = state.fetch_channel_feed(&channel.channel_id).await {
                     for video in videos {
-                        if let Ok(video_info) = super::super::polling::get_video_cmd(video.video_id.clone()).await {
+                        if let Ok(video_info) =
+                            super::super::polling::get_video_cmd(video.video_id.clone()).await
+                        {
                             let _ = super::super::state_manager::store_new_livestream(
                                 video_info,
                                 app.clone(),
-                            ).await;
+                            )
+                            .await;
                         }
                     }
                 }
@@ -444,7 +475,9 @@ pub async fn stop_monitoring(state: State<'_, ChannelManager>) -> Result<(), Cha
 }
 
 #[tauri::command]
-pub async fn get_current_channel(state: State<'_, ChannelManager>) -> Result<Option<Channel>, String> {
+pub async fn get_current_channel(
+    state: State<'_, ChannelManager>,
+) -> Result<Option<Channel>, String> {
     let channel_state = state.0.lock().await;
 
     Ok(channel_state.channel.clone())

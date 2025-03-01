@@ -1,10 +1,8 @@
 // src/components/header/index.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { TauriAPI } from '@/lib/tauri';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,20 +12,19 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
+import { TauriAPI } from '@/lib/tauri';
 import {
 	ExternalLink,
 	Github,
 	HelpCircle,
-	LogOut,
-	PanelLeftClose,
-	PanelLeftOpen,
-	PlayCircle,
+	LogOut, PlayCircle,
 	Settings,
 	User2
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
 	user: User.Information | null;

@@ -2,5 +2,8 @@
 	"editor.formatOnSave": true,
 	"css.customData": [
 		".vscode/tailwind.json"
-	]
+	],
+	"editor.codeActionsOnSave": {
+		"source.organizeImports": "always"
+	}
 }

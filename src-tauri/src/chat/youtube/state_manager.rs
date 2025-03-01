@@ -187,6 +187,7 @@ pub(crate) async fn update_video(id: String, app: AppHandle) {
     db.flush().unwrap();
 }
 
+#[allow(dead_code)]
 async fn insert() {
     let db_path = dirs::config_dir()
         .unwrap()

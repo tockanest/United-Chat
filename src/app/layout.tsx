@@ -2,17 +2,15 @@
 'use client';
 
 import { ReactScan } from "@/lib/utils/react-scan"
-import { LinkedProvider, useLinked } from '@/providers/linked';
+import { LAYOUT_TOKEN, LinkedProvider, useLinked } from '@/providers/linked';
 import { UserProvider } from '@/providers/user';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Public_Sans } from "next/font/google";
 import '../../public/styles/global.css';
 
-const ALLOWED_ROUTES = ['/', '/editor'];
-
 function AuthContent({ children }: { children: React.ReactNode }) {
-	const { state } = useLinked();
+	const { state, finishSetup } = useLinked();
 	const router = useRouter();
 	const pathname = usePathname();
 
@@ -22,7 +20,9 @@ function AuthContent({ children }: { children: React.ReactNode }) {
 
 		if (state.alreadyLinked) {
 			if (pathname === '/auth') {
-				router.replace('/');
+				finishSetup(LAYOUT_TOKEN).then(() => {
+					router.replace("/")
+				})
 			}
 		} else if (pathname !== '/auth') {
 			router.replace('/auth');

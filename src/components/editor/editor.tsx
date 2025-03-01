@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
-import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
+import { html } from '@codemirror/lang-html';
 import { dracula } from '@uiw/codemirror-theme-dracula';
+import CodeMirror from '@uiw/react-codemirror';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, } from "@/components/ui/resizable";
 
@@ -13,6 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 
 import { Button } from '@/components/ui/button';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -21,22 +30,10 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuPortal,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/tooltip";
 
+import randomMessageObject from "@/lib/utils/editor/mock_messages";
+import { replacePlaceholders } from "@/lib/utils/editor/replacePlaceholders";
 import {
 	Code2,
 	EyeIcon,
@@ -52,8 +49,6 @@ import {
 	Save,
 	Settings2,
 } from 'lucide-react';
-import { replacePlaceholders } from "@/lib/utils/editor/replacePlaceholders";
-import randomMessageObject from "@/lib/utils/editor/mock_messages";
 
 interface EditorProps {
 	htmlCode: string;
@@ -426,7 +421,7 @@ export default function Editor(
 				</div>
 			</div>
 		</div>
-	), [themeSelector, showPreview, previewPosition, isStarted, config, setConfig, onSave, onStart]);
+	), [themeSelector, showPreview, previewPosition, isStarted, handlePositionToggle, handlePreviewToggle, config, setConfig, onSave, onStart]);
 
 	useEffect(() => {
 		if (!isStarted) {

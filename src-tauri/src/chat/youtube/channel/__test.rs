@@ -3,6 +3,7 @@ use chrono::Utc;
 use reqwest::Client;
 use std::time::Duration;
 
+#[allow(dead_code)]
 async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
     let url = format!("https://www.youtube.com/{}", channel_id);
 
@@ -14,7 +15,12 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
     let mut assigned_id = channel_id.to_string();
     if assigned_id.contains("@") {
         let url = format!("https://www.youtube.com/{}", channel_id);
-        let response = client.get(&url).send().await.map_err(|e| e.to_string()).unwrap();
+        let response = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| e.to_string())
+            .unwrap();
 
         // Scrape from the HTML the identifier
         let text_doc = response.text().await.map_err(|e| e.to_string()).unwrap();
@@ -22,11 +28,11 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
         // Check if it's empty
         if text_doc.is_empty() {
             return Err(ChannelError {
-                error: "Empty response".to_string()
+                error: "Empty response".to_string(),
             });
         } else if text_doc.contains("This channel does not exist.") {
             return Err(ChannelError {
-                error: "Channel does not exist".to_string()
+                error: "Channel does not exist".to_string(),
             });
         }
 
@@ -37,8 +43,10 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
             .and_then(|s| s.split('"').next())
             .map(|s| s.to_string())
             .ok_or_else(|| ChannelError {
-                error: "Cannot find channel ID".to_string()
+                error: "Cannot find channel ID".to_string(),
             })?;
+
+        println!("Assigned ID: {}", assigned_id);
     }
 
     let response = client
@@ -47,11 +55,11 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
         .send()
         .await
         .map_err(|e| ChannelError {
-            error: format!("Failed to fetch page: {}", e)
+            error: format!("Failed to fetch page: {}", e),
         })?;
 
     let text = response.text().await.map_err(|e| ChannelError {
-        error: format!("Failed to get page text: {}", e)
+        error: format!("Failed to get page text: {}", e),
     })?;
 
     // Extract metadata section
@@ -60,15 +68,16 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
         .nth(1)
         .and_then(|s| s.split("</script>").next())
         .ok_or_else(|| ChannelError {
-            error: "Cannot find metadata".to_string()
+            error: "Cannot find metadata".to_string(),
         })?;
 
     // Remove ; from the end of the metadata
     let metadata = metadata.trim_end_matches(';');
 
-    let metadata: crate::chat::youtube::channel::manager::YTMetadata = serde_json::from_str(&metadata.to_string()).map_err(|e| ChannelError {
-        error: format!("Failed to parse metadata: {}", e)
-    })?;
+    let metadata: crate::chat::youtube::channel::manager::YTMetadata =
+        serde_json::from_str(&metadata.to_string()).map_err(|e| ChannelError {
+            error: format!("Failed to parse metadata: {}", e),
+        })?;
 
     let channel_metadata = metadata.metadata.channel_metadata_renderer;
 
@@ -77,7 +86,11 @@ async fn fetch_page_info(channel_id: &str) -> Result<Channel, ChannelError> {
         title: channel_metadata.title,
         description: Some(channel_metadata.description),
         published_at: None,
-        thumbnail_url: channel_metadata.avatar.thumbnails.first().map(|t| t.url.clone()),
+        thumbnail_url: channel_metadata
+            .avatar
+            .thumbnails
+            .first()
+            .map(|t| t.url.clone()),
         subscriber_count: None,
         video_count: None,
         custom_url: channel_metadata.vanity_channel_url,

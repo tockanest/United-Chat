@@ -15,16 +15,6 @@ pub struct ThemeState {
     pub themes: Vec<(String, PathBuf, PathBuf)>,
 }
 
-impl Theme {
-    pub fn new(name: String, html_code: String, css_code: String) -> Self {
-        Self {
-            name,
-            html_code,
-            css_code,
-        }
-    }
-}
-
 // Function to initialize default themes at app startup
 pub fn initialize_default_themes(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let themes_path = dirs::config_dir()
@@ -38,8 +28,16 @@ pub fn initialize_default_themes(app: &AppHandle) -> Result<(), Box<dyn std::err
 
         // Initialize default themes
         let default_themes = [
-            ("default", include_str!("../../../assets/themes/default/index.html"), include_str!("../../../assets/themes/default/style.css")),
-            ("sakura", include_str!("../../../assets/themes/sakura/index.html"), include_str!("../../../assets/themes/sakura/style.css")),
+            (
+                "default",
+                include_str!("../../../assets/themes/default/index.html"),
+                include_str!("../../../assets/themes/default/style.css"),
+            ),
+            (
+                "sakura",
+                include_str!("../../../assets/themes/sakura/index.html"),
+                include_str!("../../../assets/themes/sakura/style.css"),
+            ),
         ];
 
         for (theme_name, html_content, css_content) in default_themes {
@@ -72,14 +70,14 @@ pub async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, String> {
     let state = app.state::<Mutex<ThemeState>>();
     let theme_state = state.lock().unwrap();
 
-    let theme_entry = theme_state.themes.iter()
+    let theme_entry = theme_state
+        .themes
+        .iter()
         .find(|(name, _, _)| name == &theme)
         .ok_or("Theme not found")?;
 
-    let html_code = std::fs::read_to_string(&theme_entry.1)
-        .map_err(|e| e.to_string())?;
-    let css_code = std::fs::read_to_string(&theme_entry.2)
-        .map_err(|e| e.to_string())?;
+    let html_code = std::fs::read_to_string(&theme_entry.1).map_err(|e| e.to_string())?;
+    let css_code = std::fs::read_to_string(&theme_entry.2).map_err(|e| e.to_string())?;
 
     Ok(Theme {
         name: theme_entry.0.clone(),
@@ -89,8 +87,14 @@ pub async fn get_theme(theme: String, app: AppHandle) -> Result<Theme, String> {
 }
 
 #[tauri::command]
-pub(crate) async fn get_themes(app: AppHandle) -> tauri::Result<Vec<(String, std::path::PathBuf, std::path::PathBuf)>> {
-    let themes_path = dirs::config_dir().ok_or("Failed to get config directory").unwrap().join("United Chat").join("themes");
+pub(crate) async fn get_themes(
+    app: AppHandle,
+) -> tauri::Result<Vec<(String, std::path::PathBuf, std::path::PathBuf)>> {
+    let themes_path = dirs::config_dir()
+        .ok_or("Failed to get config directory")
+        .unwrap()
+        .join("United Chat")
+        .join("themes");
 
     if !themes_path.exists() {
         std::fs::create_dir_all(&themes_path)?;
@@ -112,19 +116,19 @@ pub(crate) async fn get_themes(app: AppHandle) -> tauri::Result<Vec<(String, std
         css_file.write_all(default_theme.css_code.as_bytes())?;
         sakura_css_file.write_all(sakura_theme.css_code.as_bytes())?;
 
-        return Ok(vec![("default".to_string(), default_theme_path.join("index.html"), default_theme_path.join("style.css"))]);
+        return Ok(vec![(
+            "default".to_string(),
+            default_theme_path.join("index.html"),
+            default_theme_path.join("style.css"),
+        )]);
     }
 
     // Get all folders from the themes directory and filter out the ones that are not directories
     let themes = std::fs::read_dir(&themes_path)?
         .filter_map(|entry| {
-            entry.ok().and_then(|e| {
-                if e.path().is_dir() {
-                    Some(e)
-                } else {
-                    None
-                }
-            })
+            entry
+                .ok()
+                .and_then(|e| if e.path().is_dir() { Some(e) } else { None })
         })
         .map(|entry| {
             let theme_name = entry.file_name().into_string().unwrap();
