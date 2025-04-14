@@ -1,9 +1,9 @@
 // src/providers/linked.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
 import { isRegistered } from "@tauri-apps/plugin-deep-link";
-import { TauriAPI } from '@/lib/tauri';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { TauriAPI } from '../lib/tauri';
 
 const STORAGE_KEY = 'united-chat:twitch-linked' as const;
 

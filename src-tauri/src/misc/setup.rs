@@ -1,4 +1,6 @@
-use crate::chat::twitch::auth::structs::{ImplicitGrantFlow, UserInformation, UserInformationState, UserSkippedInformation};
+use crate::chat::twitch::auth::structs::{
+    ImplicitGrantFlow, UserInformation, UserInformationState, UserSkippedInformation,
+};
 use crate::chat::youtube::channel::manager::init_channel_manager;
 use crate::chat::youtube::state_manager::get_all_videos;
 use crate::misc::editor::get_theme::initialize_default_themes;
@@ -24,7 +26,6 @@ fn get_password(service: &str, username: &str) -> Result<String, keyring::Error>
 }
 
 async fn backend_setup(app: AppHandle) {
-
     let db_manager = DatabaseManager::new();
     let config = DatabaseConfig::default();
     db_manager.initialize(Some(config)).await.unwrap();
@@ -64,7 +65,7 @@ async fn backend_setup(app: AppHandle) {
                         "error": e.to_string()
                     }),
                 )
-                    .expect("Failed to emit setup_complete event");
+                .expect("Failed to emit setup_complete event");
                 panic!("Error: {}", e);
             });
 
@@ -73,7 +74,8 @@ async fn backend_setup(app: AppHandle) {
                 Some(state) => {
                     let mut state = state
                         .lock()
-                        .map_err(|e| format!("Failed to lock user state: {}", e)).unwrap();
+                        .map_err(|e| format!("Failed to lock user state: {}", e))
+                        .unwrap();
                     *state = user;
                 }
                 None => {
@@ -83,10 +85,7 @@ async fn backend_setup(app: AppHandle) {
 
             task::spawn_blocking(move || {
                 let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime.block_on(setup_complete(
-                    app.clone(),
-                    "backend".to_string(),
-                ))
+                runtime.block_on(setup_complete(app.clone(), "backend".to_string()))
             });
         }
         Err(_) => {
@@ -113,32 +112,39 @@ async fn backend_setup(app: AppHandle) {
 
                     task::spawn_blocking(move || {
                         let runtime = tokio::runtime::Runtime::new().unwrap();
-                        runtime.block_on(setup_complete(
-                            app.clone(),
-                            "backend".to_string(),
-                        ))
+                        runtime.block_on(setup_complete(app.clone(), "backend".to_string()))
                     });
                 }
                 Err(_) => {
                     // There's no authentication set, we remove all data set on browser storage, mainly the keys: twitch_linked, setup_skipped
-                    app.emit_to("splashscreen", "twitch_auth", json!({"success": false, "error": "No authentication found"})).unwrap();
+                    app.emit_to(
+                        "splashscreen",
+                        "twitch_auth",
+                        json!({"success": false, "error": "No authentication found"}),
+                    )
+                    .unwrap();
                     return;
                 }
             }
         }
     };
 
-    initialize_default_themes(&app_clone).unwrap();
+    // Initialize default themes with error handling
+    if let Err(e) = initialize_default_themes(&app_clone) {
+        log::error!("Failed to initialize default themes: {}", e);
+        // Continue with the setup process even if theme initialization fails
+    }
+
     init_channel_manager(&app_clone).await;
-    get_all_videos(app_clone, Option::from(true), None).await.unwrap();
+    get_all_videos(app_clone, Option::from(true), None)
+        .await
+        .unwrap();
 }
 
 #[tauri::command]
-pub(crate) async fn setup_complete(
-    app: AppHandle,
-    task: String,
-) -> Result<(), ()> {
-    let state = app.try_state::<Mutex<SetupState>>()
+pub(crate) async fn setup_complete(app: AppHandle, task: String) -> Result<(), ()> {
+    let state = app
+        .try_state::<Mutex<SetupState>>()
         .expect("Setup state should be initialized");
 
     // Even if poisoned, get the state and continue
@@ -161,16 +167,33 @@ pub(crate) async fn setup_complete(
     }
 
     if state_lock.frontend_task && state_lock.backend_task {
-        let splash_window = app.get_webview_window("splashscreen").and_then(|window| Some(window));
-        let splash_window = splash_window.unwrap();
-        splash_window.close().unwrap();
+        let splash_window = app
+            .get_webview_window("splashscreen")
+            .and_then(|window| Some(window));
 
-        WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
-            .title("United Chat")
-            .build()
-            .unwrap()
-            .maximize()
-            .unwrap();
+        // Check if the window exists and set it to hidden if it does
+        if let Some(ref splash_window) = splash_window {
+            splash_window.hide().unwrap();
+        }
+
+        let main_window =
+            WebviewWindowBuilder::new(&app, "main".to_string(), WebviewUrl::default())
+                .title("United Chat")
+                .build();
+
+        match main_window {
+            Ok(window) => {
+                window.maximize().unwrap();
+            }
+            Err(e) => {
+                println!("Failed to create main window: {}", e);
+            }
+        }
+
+        // Close the splash window
+        if let Some(splash_window) = splash_window {
+            splash_window.close().unwrap();
+        }
     }
 
     // Drop setup to prevent poisoning

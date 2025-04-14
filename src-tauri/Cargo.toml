@@ -1,10 +1,8 @@
 [package]
 name = "United-Chat"
-version = "0.1.2"
+version = "0.1.0"
 description = "United Chat"
-authors = [
-    "Nixyan - nixyan@tockanest.com"
-]
+authors = ["Nixyan - nixyan@tockanest.com"]
 edition = "2021"
 license = "AGPL-3"
 readme = "../README.md"
@@ -17,23 +15,27 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2.0.0-rc", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc.3", features = ["devtools", "test"] }
+tauri = { version = "2.3.1", features = ["devtools", "test"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12.5", features = ["blocking", "multipart"] }
+reqwest = { version = "0.12.5", features = ["blocking", "multipart", "json"] }
 futures = "0.3.30"
 tokio-tungstenite = { version = "0.23.1", features = ["native-tls"] }
 tokio = { version = "1.39.2", features = ["full"] }
 regex = "1.10.6"
-keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
-tauri-plugin-shell = "2.0.0-rc.1"
-tauri-plugin-dialog = "2.0.0-rc.1"
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+] }
+tauri-plugin-shell = "2.2.0"
+tauri-plugin-dialog = "2.2.0"
 rand = "0.8.5"
 chrono = { version = "0.4.38", features = ["serde"] }
-tauri-plugin-deep-link = "2.0.0-rc.5"
+tauri-plugin-deep-link = "2.2.0"
 url = "2.5.2"
 dirs = "5.0.1"
-tauri-plugin-localhost = "2.0.0-rc.0"
+tauri-plugin-localhost = "2.2.0"
 sled = { version = "0.34.7", features = ["compression"] }
 lazy_static = "1.4"
 lru = "0.12"
@@ -45,6 +47,10 @@ tracing = "0.1.40"
 uuid = "1.10.0"
 thiserror = "1.0.63"
 anyhow = "1.0.88"
+log = "0.4.27"
+env_logger = "0.11.3"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = { version = "2.0.0-rc.3", features = ["deep-link"] }
+tauri-plugin-single-instance = { version = "2.0.0-rc.3", features = [
+    "deep-link",
+] }

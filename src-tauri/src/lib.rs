@@ -2,55 +2,29 @@ mod chat;
 mod misc;
 
 // Standard library imports
-use std::{
-    collections::HashMap,
-    sync::Mutex,
-};
+use std::{collections::HashMap, sync::Mutex};
 
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 // External crate imports
-use tauri::{
-    WebviewUrl,
-    WebviewWindowBuilder,
-};
 use tauri_plugin_deep_link::DeepLinkExt;
 use url::Url;
 
 // Internal chat module imports
 use crate::chat::{
-    initialize::{
-        united_chat_init,
-        united_chat_stop,
-        UnitedChat,
-    },
+    initialize::{united_chat_init, united_chat_stop, UnitedChat},
     twitch::{
-        auth::{
-            link::twitch_auth,
-            skip::link_process,
-            start::linking,
-            unlink::twitch,
-        },
+        auth::{link::twitch_auth, skip::link_process, start::linking, unlink::twitch},
         get_user::get_user,
     },
     youtube::{
         channel::manager::{
-            set_channel,
-            start_monitoring,
-            stop_monitoring,
-            get_current_channel,
-            update_channel_info
+            get_current_channel, set_channel, start_monitoring, stop_monitoring,
+            update_channel_info,
         },
-        polling::{
-            get_live_chat_cmd,
-            get_video_cmd,
-        },
+        polling::{get_live_chat_cmd, get_video_cmd},
         state_manager::{
-            delete_video_from_db,
-            get_all_videos,
-            get_video_from_db,
-            store_new_livestream,
-            update_video,
-            update_video_metadata,
-            StoredVideos,
+            delete_video_from_db, get_all_videos, get_video_from_db, store_new_livestream,
+            update_video, update_video_metadata, StoredVideos,
         },
     },
 };
@@ -58,24 +32,19 @@ use crate::chat::{
 // Internal misc module imports
 use crate::misc::{
     editor::{
-        get_app_url::{
-            hide_webchat_window,
-            open_webchat_window,
+        get_theme::{get_theme, get_themes},
+        open_windows::{
+            close_mock_chat_window, hide_webchat_window, open_mock_chat_window, open_webchat_window,
         },
-        get_theme::{
-            get_theme,
-            get_themes,
-        },
-        save_theme::save_theme,
+        save_theme::{delete_folder, delete_theme, rename_theme, save_theme, save_theme_folder},
     },
     qol::{
         check_if_unsaved::check_if_unsaved,
+        get_focus::{focus_event_emitter, get_focus_state},
         linking_ais::twitch_linking,
+        logging::setup_logging,
     },
-    setup::{
-        setup_complete,
-        SetupState,
-    },
+    setup::{setup_complete, SetupState},
 };
 
 fn extract_info(urls: Vec<Url>) -> HashMap<String, String> {
@@ -102,6 +71,11 @@ fn extract_info(urls: Vec<Url>) -> HashMap<String, String> {
 pub fn run() {
     misc::qol::error_handling::setup_panic_hook();
 
+    // Initialize logging
+    if let Err(e) = setup_logging() {
+        eprintln!("Failed to initialize logging: {}", e);
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -126,15 +100,16 @@ pub fn run() {
         .setup(|app| {
             app.deep_link().register("unitedchat").unwrap();
 
-            let url = format!("http://localhost:{}", 9889).parse().unwrap();
+            let host = std::env::var("TAURI_DEV_HOST").unwrap_or_else(|_| "localhost".to_string());
+            let url = format!("http://{}:{}/auth", host, 3000).parse().unwrap();
 
-            WebviewWindowBuilder::new(app, "webchat".to_string(), WebviewUrl::External(url))
-                .visible(false)
-                .resizable(true)
+            WebviewWindowBuilder::new(app, "splashscreen".to_string(), WebviewUrl::External(url))
+                .title("United Chat - Splashscreen")
+                .resizable(false)
+                .visible(true)
                 .center()
-                .closable(false)
-                .transparent(true)
-                .title("United Chat - WebChat")
+                .closable(true)
+                .inner_size(600.0, 600.0)
                 .build()?;
 
             Ok(())
@@ -149,10 +124,16 @@ pub fn run() {
             get_theme,
             get_themes,
             save_theme,
+            save_theme_folder,
+            rename_theme,
+            delete_theme,
+            delete_folder,
             check_if_unsaved,
             // WebChat Window
             open_webchat_window,
+            open_mock_chat_window,
             hide_webchat_window,
+            close_mock_chat_window,
             // YouTube
             get_video_cmd,
             get_live_chat_cmd,
@@ -172,7 +153,9 @@ pub fn run() {
             united_chat_init,
             united_chat_stop,
             // Account Linking After initial Setup
-            twitch_linking
+            twitch_linking,
+            get_focus_state,
+            focus_event_emitter,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

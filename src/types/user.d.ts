@@ -13,7 +13,14 @@ declare global {
 				profile_image_url: string;
 			};
 		}
+
+		interface UserInformationReqResponse {
+			success: boolean;
+			reason: string;
+			setup_skipped: boolean;
+			user: Information | null;
+		}
 	}
 }
 
-export {};
+export { };

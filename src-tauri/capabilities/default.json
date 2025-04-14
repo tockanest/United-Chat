@@ -3,7 +3,9 @@
 	"identifier": "default",
 	"description": "Capability for the main window",
 	"windows": [
-		"main"
+		"main",
+		"webchat",
+		"mockchat"
 	],
 	"permissions": [
 		"core:window:default",
@@ -17,6 +19,8 @@
 		"shell:default",
 		"deep-link:default",
 		"deep-link:allow-is-registered",
-		"deep-link:allow-get-current"
+		"deep-link:allow-get-current",
+		"core:window:allow-destroy",
+		"core:window:allow-set-size"
 	]
 }

@@ -1,16 +1,28 @@
-.fade-out {
+.message {
+    opacity: 1;
+    transition: opacity 2s ease-out;
+}
+
+.message.fade-out {
     opacity: 0;
-    transition: opacity 3s ease-out;
+}
+
+.fade-out-uc {
+    opacity: 1;
+    transition: opacity 2s ease-out;
+}
+
+.fade-out-uc.fading {
+    opacity: 0;
 }
 
 @keyframes slideFromRight {
     from {
         transform: translateX(100%);
-        opacity: 0;
     }
+
     to {
         transform: translateX(0);
-        opacity: 1;
     }
 }
 
@@ -18,11 +30,22 @@
     animation: slideFromRight 0.5s ease-out forwards;
 }
 
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 @keyframes slideFromBottom {
     from {
         transform: translateY(100%);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -42,6 +65,7 @@ But none of the transitions are working on the preview, so oh well.
     from {
         width: 0;
     }
+
     to {
         width: 100%;
     }

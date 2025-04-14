@@ -37,6 +37,7 @@ function formatYoutubeMessage(message: Chat.YoutubeResponse) {
 }
 
 function replacePlaceholders(template: string, message: Chat.Message["message"], platform: Chat.PlatformMessage<"twitch" | "youtube">["platform"]) {
+	template = template.replaceAll(/<!--[\s\S]*?-->/g, '');
 	switch (platform) {
 		case "twitch": {
 			message = message as Chat.TwitchResponse;

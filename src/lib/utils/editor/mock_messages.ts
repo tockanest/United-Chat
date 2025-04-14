@@ -1,3 +1,5 @@
+import twitchBadges from "@/../public/badges/twitch_badges.json";
+
 const phrases = [
 	"Hey, what's up? Just dropping by to say hi!",
 	"Your streams are the best! Keep 'em coming!",
@@ -81,25 +83,31 @@ const randomUsernames = [
 	"SiliconStorm",
 	"CircuitCatalyst",
 	"DigitalDominion",
-	"QuantumQuasar"
+	"QuantumQuasar",
+	"TechTitan",
+	"SiliconSorcerer",
+	"CircuitConstructor",
+	"DigitalDynamo",
+	"QuantumQuake",
+	"FiberFlux",
+
 ];
 
 function randomIds() {
-	return Math.random().toString(36).substring(2, 15);
+	// Combine timestamp with random string for better uniqueness
+	const timestamp = Date.now().toString(36);
+	const randomPart = Math.random().toString(36).substring(2, 10);
+	return `${timestamp}-${randomPart}`;
 }
 
 function userBadges() {
-	const badges = [
-		"https://static-cdn.jtvnw.net/badges/v1/7833bb6e-d20d-48ff-a58d-67fe827a4f84/3",
-		"https://static-cdn.jtvnw.net/badges/v1/9ef7e029-4cdf-4d4d-a0d5-e2b3fb2583fe/3",
-		"https://static-cdn.jtvnw.net/badges/v1/2cbc339f-34f4-488a-ae51-efdf74f4e323/3",
-		"https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/3",
-		"https://static-cdn.jtvnw.net/badges/v1/ed917c9a-1a45-4340-9c64-ca8be4348c51/3"
-	];
-	
-	// Select maximum of 3 badges
-	const maxBadges = 3;
-	return badges.slice(0, Math.min(maxBadges, badges.length));
+	const badges = twitchBadges.data.map((badge) => badge.versions[0].image_url_4x);
+
+	// Randomly select between 0 and 3 badges
+	const numBadges = Math.floor(Math.random() * 4); // 0 to 3
+	const shuffledBadges = [...badges].sort(() => Math.random() - 0.5);
+
+	return shuffledBadges.slice(0, numBadges);
 }
 
 function randomMessage() {
@@ -118,11 +126,11 @@ function randomColorHex() {
 	return "#" + Math.floor(Math.random() * 16777215).toString(16);
 }
 
-export default function randomMessageObject(): Chat.PlatformMessage<"twitch" | "youtube"> {
+export default function randomMessageObject(): Chat.Message {
 	const badges = userBadges();
-	
+
 	const platform = randomPlatform();
-	
+
 	switch (platform) {
 		case "twitch": {
 			return {
@@ -153,7 +161,7 @@ export default function randomMessageObject(): Chat.PlatformMessage<"twitch" | "
 					author_badges: badges,
 					message: randomMessage(),
 					message_emotes: [],
-					timestamp: new Date().toISOString(),
+					timestamp: Math.floor(new Date().getTime() * 1000).toString(),
 					tracking_params: ""
 				}
 			};

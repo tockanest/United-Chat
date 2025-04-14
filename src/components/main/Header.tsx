@@ -1,20 +1,6 @@
 // src/components/header/index.tsx
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
-import { TauriAPI } from '@/lib/tauri';
 import {
 	ExternalLink,
 	Github,
@@ -25,15 +11,26 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from 'next/navigation';
+import { TauriAPI } from '../../lib/tauri';
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Button } from "../ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Separator } from "../ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "../ui/tooltip";
 
 interface HeaderProps {
 	user: User.Information | null;
 }
 
-export default function Header(
-	{
-		user
-	}: HeaderProps) {
+export default function Header({ user }: HeaderProps) {
 	const router = useRouter();
 
 	return (
@@ -41,7 +38,7 @@ export default function Header(
 			<div className="flex h-14 items-center gap-4 px-4">
 				<div className="flex items-center gap-2 select-none">
 					<Image
-						src={"/icons/44x44.png"}
+						src={"/icons/logo.png"}
 						alt={"United Chat Logo"}
 						width={44}
 						height={44}

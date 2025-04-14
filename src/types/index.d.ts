@@ -4,4 +4,14 @@
 /// <reference path="./streams.d.ts" />
 /// <reference path="./user.d.ts" />
 
-export {};
+import type * as app from "@tauri-apps/api/app";
+
+declare global {
+    interface Window {
+        __TAURI__: {
+            app?: typeof app;
+        };
+    }
+}
+
+export { };

@@ -3,7 +3,9 @@
 	"identifier": "splash-capability",
 	"description": "Capability for the splashscreen window",
 	"windows": [
-		"splashscreen"
+		"splashscreen",
+		"mockchat",
+		"webchat"
 	],
 	"permissions": [
 		"core:window:default",

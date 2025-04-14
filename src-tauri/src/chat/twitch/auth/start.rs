@@ -1,4 +1,6 @@
-use crate::chat::twitch::auth::structs::{InternalUserInformation, ReqUserResponse, ReqValidateResponse, UserInformation};
+use crate::chat::twitch::auth::structs::{
+    InternalUserInformation, ReqUserResponse, ReqValidateResponse, UserInformation,
+};
 
 #[tauri::command]
 pub(crate) async fn linking(client_id: &str, scopes: &str) -> Result<String, ()> {
@@ -17,7 +19,7 @@ pub(crate) async fn linking(client_id: &str, scopes: &str) -> Result<String, ()>
     //     "https://tockanest.com/united-chat/auth"
     // };
 
-    let redirect_uri = "https://tockanest.com/united-chat/auth";
+    let redirect_uri = "https://tockanest.ch/united-chat/auth";
 
     let url = format!(
         "https://id.twitch.tv/oauth2/authorize?client_id={}&redirect_uri={}&response_type={}&scope={}&state={}",
